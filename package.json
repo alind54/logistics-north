@@ -1,0 +1,21 @@
+{
+  "name": "request-tracker",
+  "private": true,
+  "packageManager": "pnpm@9.1.0",
+  "scripts": {
+    "dev": "pnpm --filter @request-tracker/web dev",
+    "build": "pnpm --filter @request-tracker/web build",
+    "start": "pnpm --filter @request-tracker/web start",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @request-tracker/web test:e2e",
+    "db:migrate": "pnpm --filter @request-tracker/web db:migrate",
+    "db:generate": "pnpm --filter @request-tracker/web db:generate",
+    "db:seed": "pnpm --filter @request-tracker/web db:seed",
+    "db:studio": "pnpm --filter @request-tracker/web db:studio"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

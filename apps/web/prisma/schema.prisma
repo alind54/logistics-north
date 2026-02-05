@@ -1,0 +1,283 @@
+// Prisma Schema for Request Tracker
+// Matches docs/02-architecture/DATA_MODEL.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  OPERATOR
+  VIEWER
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum FlowType {
+  ORDER
+  CONTRACT
+}
+
+enum AppliesTo {
+  ORDER
+  CONTRACT
+  BOTH
+}
+
+// ============================================================================
+// USERS
+// ============================================================================
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(OPERATOR)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastLoginAt  DateTime?
+
+  // Rate limiting for login attempts
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  // Relations
+  createdRequests  Request[]      @relation("CreatedByUser")
+  ownedRequests    Request[]      @relation("OwnerUser")
+  stageHistories   StageHistory[]
+  uploadedAttachments Attachment[]
+  auditEvents      AuditEvent[]
+  passwordResetTokens PasswordResetToken[]
+  notifications    Notification[]
+
+  @@map("users")
+}
+
+// ============================================================================
+// REQUESTS
+// ============================================================================
+
+model Request {
+  id             String    @id @default(uuid())
+  description    String
+  notes          String?
+  priority       Priority  @default(NORMAL)
+  dueDate        DateTime?
+  flowType       FlowType
+  currentStageId String
+  createdByUserId String
+  ownerUserId    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  currentStage   Stage          @relation(fields: [currentStageId], references: [id])
+  createdBy      User           @relation("CreatedByUser", fields: [createdByUserId], references: [id])
+  owner          User?          @relation("OwnerUser", fields: [ownerUserId], references: [id])
+  tags           RequestTag[]
+  attachments    Attachment[]
+  stageHistory   StageHistory[]
+  auditEvents    AuditEvent[]
+
+  @@index([currentStageId])
+  @@index([flowType])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([createdByUserId])
+  @@index([ownerUserId])
+  @@map("requests")
+}
+
+// ============================================================================
+// WORKFLOW (STAGES & TRANSITIONS)
+// ============================================================================
+
+model Stage {
+  id         String    @id @default(uuid())
+  name       String
+  orderIndex Int
+  isActive   Boolean   @default(true)
+  appliesTo  AppliesTo
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Relations
+  requests         Request[]
+  stageHistory     StageHistory[]
+  fromTransitions  Transition[]   @relation("FromStage")
+  toTransitions    Transition[]   @relation("ToStage")
+
+  @@index([appliesTo])
+  @@index([orderIndex])
+  @@map("stages")
+}
+
+model Transition {
+  id          String    @id @default(uuid())
+  fromStageId String
+  toStageId   String
+  appliesTo   AppliesTo
+  isActive    Boolean   @default(true)
+
+  // Relations
+  fromStage Stage @relation("FromStage", fields: [fromStageId], references: [id])
+  toStage   Stage @relation("ToStage", fields: [toStageId], references: [id])
+
+  @@unique([fromStageId, toStageId, appliesTo])
+  @@index([fromStageId])
+  @@index([toStageId])
+  @@map("transitions")
+}
+
+// ============================================================================
+// STAGE HISTORY (for duration tracking)
+// ============================================================================
+
+model StageHistory {
+  id          String    @id @default(uuid())
+  requestId   String
+  stageId     String
+  enteredAt   DateTime  @default(now())
+  exitedAt    DateTime?
+  actorUserId String
+  moveReason  String?
+
+  // Relations
+  request Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  stage   Stage   @relation(fields: [stageId], references: [id])
+  actor   User    @relation(fields: [actorUserId], references: [id])
+
+  // Invariant: At most one open stage_history row per request (where exitedAt is null)
+  @@index([requestId])
+  @@index([stageId])
+  @@index([exitedAt])
+  @@map("stage_history")
+}
+
+// ============================================================================
+// TAGS
+// ============================================================================
+
+model Tag {
+  id        String       @id @default(uuid())
+  name      String       @unique
+  color     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  requests RequestTag[]
+
+  @@map("tags")
+}
+
+model RequestTag {
+  requestId String
+  tagId     String
+
+  request Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([requestId, tagId])
+  @@map("request_tags")
+}
+
+// ============================================================================
+// ATTACHMENTS
+// ============================================================================
+
+model Attachment {
+  id               String   @id @default(uuid())
+  requestId        String
+  blobKey          String
+  fileName         String
+  mimeType         String
+  sizeBytes        BigInt
+  uploadedByUserId String
+  createdAt        DateTime @default(now())
+
+  // Relations
+  request    Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  uploadedBy User    @relation(fields: [uploadedByUserId], references: [id])
+
+  @@index([requestId])
+  @@map("attachments")
+}
+
+// ============================================================================
+// PASSWORD RESET TOKENS
+// ============================================================================
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  linkUrl   String?
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============================================================================
+// AUDIT EVENTS (append-only)
+// ============================================================================
+
+model AuditEvent {
+  id          String   @id @default(uuid())
+  requestId   String?
+  actorUserId String
+  eventType   String
+  payloadJson Json?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  request Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  actor   User     @relation(fields: [actorUserId], references: [id])
+
+  @@index([requestId])
+  @@index([actorUserId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("audit_events")
+}

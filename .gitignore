@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage
+.nyc_output
+playwright-report
+test-results
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Vercel
+.vercel
+
+# Uploads (local attachment storage)
+uploads/
+
+# Misc
+*.tsbuildinfo
+.claude/

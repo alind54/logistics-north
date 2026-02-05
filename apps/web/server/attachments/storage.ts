@@ -123,8 +123,8 @@ async function localDelete(blobKey: string): Promise<boolean> {
 
 async function s3Upload(blobKey: string, buffer: Buffer, mimeType: string): Promise<string> {
   try {
-    // @ts-ignore - @aws-sdk/client-s3 is an optional dependency
-    const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+    // @ts-ignore - optional dependency
+    const { S3Client, PutObjectCommand } = await import(/* webpackIgnore: true */ '@aws-sdk/client-s3');
     const client = new S3Client({
       region: process.env.S3_REGION ?? 'us-east-1',
       ...(process.env.S3_ENDPOINT ? { endpoint: process.env.S3_ENDPOINT } : {}),
@@ -150,8 +150,8 @@ async function s3Upload(blobKey: string, buffer: Buffer, mimeType: string): Prom
 
 async function s3Download(blobKey: string): Promise<{ buffer: Buffer; exists: boolean }> {
   try {
-    // @ts-ignore - @aws-sdk/client-s3 is an optional dependency
-    const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
+    // @ts-ignore - optional dependency
+    const { S3Client, GetObjectCommand } = await import(/* webpackIgnore: true */ '@aws-sdk/client-s3');
     const client = new S3Client({
       region: process.env.S3_REGION ?? 'us-east-1',
       ...(process.env.S3_ENDPOINT ? { endpoint: process.env.S3_ENDPOINT } : {}),
@@ -175,8 +175,8 @@ async function s3Download(blobKey: string): Promise<{ buffer: Buffer; exists: bo
 
 async function s3Delete(blobKey: string): Promise<boolean> {
   try {
-    // @ts-ignore - @aws-sdk/client-s3 is an optional dependency
-    const { S3Client, DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+    // @ts-ignore - optional dependency
+    const { S3Client, DeleteObjectCommand } = await import(/* webpackIgnore: true */ '@aws-sdk/client-s3');
     const client = new S3Client({
       region: process.env.S3_REGION ?? 'us-east-1',
       ...(process.env.S3_ENDPOINT ? { endpoint: process.env.S3_ENDPOINT } : {}),
@@ -203,8 +203,8 @@ async function s3Delete(blobKey: string): Promise<boolean> {
 
 async function vercelBlobUpload(blobKey: string, buffer: Buffer, _mimeType: string): Promise<string> {
   try {
-    // @ts-ignore - @vercel/blob is an optional dependency
-    const { put } = await import('@vercel/blob');
+    // @ts-ignore - optional dependency
+    const { put } = await import(/* webpackIgnore: true */ '@vercel/blob');
     const blob = await put(blobKey, buffer, { access: 'public' });
     return blob.url;
   } catch (error) {
@@ -227,8 +227,8 @@ async function vercelBlobDownload(blobKey: string): Promise<{ buffer: Buffer; ex
 
 async function vercelBlobDelete(blobKey: string): Promise<boolean> {
   try {
-    // @ts-ignore - @vercel/blob is an optional dependency
-    const { del } = await import('@vercel/blob');
+    // @ts-ignore - optional dependency
+    const { del } = await import(/* webpackIgnore: true */ '@vercel/blob');
     await del(blobKey);
     return true;
   } catch {

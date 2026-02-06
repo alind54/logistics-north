@@ -77,7 +77,7 @@ export default async function DashboardPage() {
     where: { dueDate: { lt: now } },
   });
 
-  const stageMap = new Map(stages.map((s) => [s.id, s.name]));
+  const stageMap = new Map(stages.map((s: { id: string; name: string }) => [s.id, s.name]));
 
   // Calculate average time per stage (last 30 days)
   const stageTimeMap = new Map<string, number[]>();
@@ -89,7 +89,7 @@ export default async function DashboardPage() {
     stageTimeMap.set(sh.stageId, existing);
   }
 
-  const avgTimeByStage = stages.map((stage) => {
+  const avgTimeByStage = stages.map((stage: { id: string; name: string }) => {
     const durations = stageTimeMap.get(stage.id) ?? [];
     const avg = durations.length > 0
       ? durations.reduce((a, b) => a + b, 0) / durations.length
@@ -118,7 +118,7 @@ export default async function DashboardPage() {
     agingBuckets.set(oh.stageId, bucket);
   }
 
-  const urgentCount = requestsByPriority.find((p) => p.priority === 'URGENT')?._count ?? 0;
+  const urgentCount = requestsByPriority.find((p: { priority: string; _count: number }) => p.priority === 'URGENT')?._count ?? 0;
 
   return (
     <div className="space-y-6">
@@ -159,7 +159,7 @@ export default async function DashboardPage() {
           <h2 className="mb-4 text-lg font-semibold">Priority Distribution</h2>
           <div className="space-y-3">
             {(['URGENT', 'HIGH', 'NORMAL', 'LOW'] as const).map((priority) => {
-              const count = requestsByPriority.find((p) => p.priority === priority)?._count ?? 0;
+              const count = requestsByPriority.find((p: { priority: string; _count: number }) => p.priority === priority)?._count ?? 0;
               const percentage = totalRequests > 0 ? Math.round((count / totalRequests) * 100) : 0;
               return (
                 <div key={priority}>
@@ -191,7 +191,7 @@ export default async function DashboardPage() {
         <div className="rounded-lg border bg-card p-6">
           <h2 className="mb-4 text-lg font-semibold">Requests by Stage</h2>
           <div className="space-y-2">
-            {requestsByStage.map((item) => (
+            {requestsByStage.map((item: { currentStageId: string; _count: number }) => (
               <div
                 key={item.currentStageId}
                 className="flex items-center justify-between rounded bg-muted/50 px-3 py-2"
@@ -254,7 +254,7 @@ export default async function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {stages.map((stage) => {
+              {stages.map((stage: { id: string; name: string }) => {
                 const bucket = agingBuckets.get(stage.id);
                 const total = bucket
                   ? bucket.under24h + bucket.d1to3 + bucket.d3to7 + bucket.over7d
@@ -309,7 +309,7 @@ export default async function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {overdueRequests.map((req) => (
+                {overdueRequests.map((req: { id: string; description: string; priority: string; dueDate: Date | null; currentStage: { name: string }; owner: { email: string } | null }) => (
                   <tr key={req.id} className="border-b last:border-0">
                     <td className="py-3">
                       <Link

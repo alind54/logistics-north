@@ -2,9 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@request-tracker/shared', '@request-tracker/ui'],
-  experimental: {
-    serverComponentsExternalPackages: ['argon2'],
-  },
   async headers() {
     return [
       {

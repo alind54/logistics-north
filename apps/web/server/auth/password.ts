@@ -1,11 +1,6 @@
-import * as argon2 from 'argon2';
+import bcrypt from 'bcryptjs';
 
-const ARGON2_OPTIONS: argon2.Options = {
-  type: argon2.argon2id,
-  memoryCost: 65536, // 64 MB
-  timeCost: 3,
-  parallelism: 4,
-};
+const SALT_ROUNDS = 12;
 
 function getPepper(): string {
   const pepper = process.env.PASSWORD_PEPPER;
@@ -17,7 +12,7 @@ function getPepper(): string {
 
 export async function hashPassword(password: string): Promise<string> {
   const pepperedPassword = password + getPepper();
-  return argon2.hash(pepperedPassword, ARGON2_OPTIONS);
+  return bcrypt.hash(pepperedPassword, SALT_ROUNDS);
 }
 
 export async function verifyPassword(
@@ -26,7 +21,7 @@ export async function verifyPassword(
 ): Promise<boolean> {
   const pepperedPassword = password + getPepper();
   try {
-    return await argon2.verify(hash, pepperedPassword);
+    return await bcrypt.compare(pepperedPassword, hash);
   } catch {
     return false;
   }

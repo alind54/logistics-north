@@ -1,5 +1,5 @@
 import { PrismaClient, AppliesTo, UserRole } from '@prisma/client';
-import * as argon2 from 'argon2';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -129,12 +129,7 @@ async function main() {
   if (process.env.NODE_ENV !== 'production') {
     console.log('\nCreating default admin user...');
     const pepper = process.env.PASSWORD_PEPPER || 'dev-pepper-change-me';
-    const passwordHash = await argon2.hash('AdminPassword123!' + pepper, {
-      type: argon2.argon2id,
-      memoryCost: 65536,
-      timeCost: 3,
-      parallelism: 4,
-    });
+    const passwordHash = await bcrypt.hash('AdminPassword123!' + pepper, 12);
 
     await prisma.user.upsert({
       where: { email: 'admin@example.com' },

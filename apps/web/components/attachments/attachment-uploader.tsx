@@ -7,9 +7,10 @@ import { UPLOAD_CONFIG } from '@request-tracker/shared';
 
 interface AttachmentUploaderProps {
   requestId: string;
+  stageId?: string;
 }
 
-export function AttachmentUploader({ requestId }: AttachmentUploaderProps) {
+export function AttachmentUploader({ requestId, stageId }: AttachmentUploaderProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -34,6 +35,9 @@ export function AttachmentUploader({ requestId }: AttachmentUploaderProps) {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (stageId) {
+        formData.append('stageId', stageId);
+      }
 
       const res = await fetch(`/api/requests/${requestId}/attachments`, {
         method: 'POST',

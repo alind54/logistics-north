@@ -38,9 +38,9 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Requests</h1>
+        <h1 className="text-2xl font-bold">Projects</h1>
         <p className="text-muted-foreground">
-          Manage and track all requests
+          Manage and track all projects
         </p>
       </div>
 

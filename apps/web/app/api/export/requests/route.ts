@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
+        mrfNumber: true,
         description: true,
         notes: true,
         priority: true,
@@ -46,12 +47,13 @@ export async function GET(request: NextRequest) {
     });
 
     const headers = [
-      'ID', 'Description', 'Notes', 'Priority', 'Flow Type',
+      'MRF Number', 'ID', 'Description', 'Notes', 'Priority', 'Flow Type',
       'Current Stage', 'Due Date', 'Created At', 'Updated At',
       'Created By', 'Owner', 'Tags',
     ];
 
     const rows = requests.map((r) => [
+      `MRF-${r.mrfNumber.toString().padStart(3, '0')}`,
       r.id,
       escapeCsvField(r.description),
       escapeCsvField(r.notes ?? ''),

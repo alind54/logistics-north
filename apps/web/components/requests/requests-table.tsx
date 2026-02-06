@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Badge, Button, cn } from '@request-tracker/ui';
 import type { RequestListItemDTO, Priority } from '@request-tracker/shared';
+import { formatMrfNumber } from '@request-tracker/shared';
 
 interface RequestsTableProps {
   requests: RequestListItemDTO[];
@@ -54,7 +55,7 @@ export function RequestsTable({
     <div className="space-y-4">
       {/* Results count */}
       <p className="text-sm text-muted-foreground">
-        Showing {requests.length} of {total} requests
+        Showing {requests.length} of {total} projects
       </p>
 
       {/* Table */}
@@ -63,6 +64,7 @@ export function RequestsTable({
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/50">
+                <th className="px-4 py-3 text-left text-sm font-medium">MRF #</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Priority</th>
                 <th className="hidden px-4 py-3 text-left text-sm font-medium md:table-cell">Stage</th>
@@ -75,13 +77,21 @@ export function RequestsTable({
             <tbody>
               {requests.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                    No requests found
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
+                    No projects found
                   </td>
                 </tr>
               ) : (
                 requests.map((request) => (
                   <tr key={request.id} className="border-b transition-colors hover:bg-muted/50">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/requests/${request.id}`}
+                        className="font-mono text-sm font-semibold text-primary hover:underline"
+                      >
+                        {formatMrfNumber(request.mrfNumber)}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3">
                       <Link
                         href={`/requests/${request.id}`}

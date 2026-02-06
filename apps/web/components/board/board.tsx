@@ -128,7 +128,7 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
       {/* Board Header */}
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">Request Board</h1>
+          <h1 className="text-2xl font-bold">Project Board</h1>
           <Select
             value={flowType}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFlowType(e.target.value as FlowType)}
@@ -139,7 +139,7 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
           </Select>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
-          New Request
+          New Project
         </Button>
       </div>
 

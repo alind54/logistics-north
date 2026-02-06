@@ -52,3 +52,8 @@ export const UPLOAD_CONFIG = {
     'text/csv',
   ] as const,
 } as const;
+
+// MRF number formatting
+export function formatMrfNumber(n: number): string {
+  return `MRF-${n.toString().padStart(3, '0')}`;
+}

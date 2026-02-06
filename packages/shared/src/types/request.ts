@@ -15,6 +15,8 @@ export interface AttachmentDTO {
   sizeBytes: number;
   createdAt: string;
   uploadedBy: Pick<UserDTO, 'id' | 'email'>;
+  stageId: string | null;
+  stageName: string | null;
 }
 
 export interface StageHistoryDTO {
@@ -30,6 +32,7 @@ export interface StageHistoryDTO {
 
 export interface RequestDTO {
   id: string;
+  mrfNumber: number;
   description: string;
   notes: string | null;
   priority: Priority;
@@ -51,11 +54,13 @@ export interface RequestDetailDTO extends RequestDTO {
 
 export interface RequestListItemDTO {
   id: string;
+  mrfNumber: number;
   description: string;
   priority: Priority;
   dueDate: string | null;
   flowType: FlowType;
   currentStage: Pick<StageDTO, 'id' | 'name'>;
+  currentStageEnteredAt: string | null;
   owner: Pick<UserDTO, 'id' | 'email'> | null;
   tags: TagDTO[];
   createdAt: string;
@@ -96,7 +101,7 @@ export interface RequestFilters {
   ownerId?: string;
 }
 
-export type RequestSortField = 'createdAt' | 'updatedAt' | 'dueDate' | 'priority';
+export type RequestSortField = 'createdAt' | 'updatedAt' | 'dueDate' | 'priority' | 'mrfNumber';
 export type SortDirection = 'asc' | 'desc';
 
 export interface RequestSortOptions {

@@ -26,7 +26,7 @@ export function BoardColumn({
     <div
       className="flex h-full w-[300px] flex-shrink-0 flex-col rounded-lg border bg-muted/30 md:w-[320px]"
       role="region"
-      aria-label={`${stage.name} stage - ${requests.length} request${requests.length !== 1 ? 's' : ''}`}
+      aria-label={`${stage.name} stage - ${requests.length} project${requests.length !== 1 ? 's' : ''}`}
     >
       {/* Column Header */}
       <div className="flex items-center justify-between border-b bg-muted/50 px-3 py-2">
@@ -49,7 +49,7 @@ export function BoardColumn({
           </div>
         ) : requests.length === 0 ? (
           <div className="flex h-24 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
-            No requests
+            No projects
           </div>
         ) : (
           requests.map((request) => (

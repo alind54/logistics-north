@@ -20,7 +20,9 @@ import type {
   RequestDetailDTO,
   Priority,
   TransitionDTO,
+  StageDTO,
 } from '@request-tracker/shared';
+import { formatMrfNumber } from '@request-tracker/shared';
 import { AttachmentUploader } from '@/components/attachments/attachment-uploader';
 import { AttachmentList } from '@/components/attachments/attachment-list';
 import { AuditEventList } from '@/components/audit/audit-event-list';
@@ -39,6 +41,7 @@ interface TransitionWithStage extends TransitionDTO {
 
 interface RequestDetailProps {
   request: RequestDetailDTO;
+  allStages: StageDTO[];
   availableTransitions: TransitionWithStage[];
   auditEvents: AuditEvent[];
   canEdit: boolean;
@@ -92,6 +95,7 @@ function getCurrentDuration(enteredAt: string): string {
 
 export function RequestDetail({
   request,
+  allStages,
   availableTransitions,
   auditEvents,
   canEdit,
@@ -164,6 +168,24 @@ export function RequestDetail({
   // Find current stage history entry (one without exitedAt)
   const currentStageHistory = request.stageHistory.find((h) => !h.exitedAt);
 
+  // Compute completed stage IDs
+  const completedStageIds = new Set(
+    request.stageHistory.filter((h) => h.exitedAt).map((h) => h.stageId)
+  );
+
+  // Group attachments by stage
+  const attachmentsByStage = new Map<string, typeof request.attachments>();
+  const generalAttachments: typeof request.attachments = [];
+  for (const att of request.attachments) {
+    if (att.stageId) {
+      const list = attachmentsByStage.get(att.stageId) ?? [];
+      list.push(att);
+      attachmentsByStage.set(att.stageId, list);
+    } else {
+      generalAttachments.push(att);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -173,22 +195,56 @@ export function RequestDetail({
             href="/requests"
             className="text-sm text-muted-foreground hover:text-foreground"
           >
-            &larr; Back to Requests
+            &larr; Back to Projects
           </Link>
-          <h1 className="mt-2 text-2xl font-bold">Request Details</h1>
+          <h1 className="mt-2 text-2xl font-bold">
+            <span className="font-mono text-primary">{formatMrfNumber(request.mrfNumber)}</span>
+            {' '}&mdash; Project Details
+          </h1>
         </div>
         {canEdit && !isEditing && (
-          <Button onClick={() => setIsEditing(true)}>Edit Request</Button>
+          <Button onClick={() => setIsEditing(true)}>Edit Project</Button>
         )}
       </div>
+
+      {/* Stage Progress Bar */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-1">
+            {allStages.map((stage) => {
+              const isCompleted = completedStageIds.has(stage.id);
+              const isCurrent = stage.id === request.currentStage.id;
+              return (
+                <div key={stage.id} className="flex flex-1 flex-col items-center gap-1">
+                  <div
+                    className={cn(
+                      'h-2 w-full rounded-full',
+                      isCompleted ? 'bg-green-500' :
+                      isCurrent ? 'bg-primary' : 'bg-muted'
+                    )}
+                    title={`${stage.name}${isCurrent ? ' (current)' : isCompleted ? ' (completed)' : ''}`}
+                  />
+                  <span className={cn(
+                    'text-[10px] leading-tight text-center',
+                    isCurrent ? 'font-semibold text-primary' :
+                    isCompleted ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
+                  )}>
+                    {stage.name}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Content */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Request Info */}
+          {/* Project Info */}
           <Card>
             <CardHeader>
-              <CardTitle>Request Information</CardTitle>
+              <CardTitle>Project Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {isEditing ? (
@@ -362,12 +418,19 @@ export function RequestDetail({
                           Exited: {formatDateTime(history.exitedAt)}
                         </p>
                       )}
-                      <p className="text-sm text-muted-foreground">
-                        Duration:{' '}
-                        {history.exitedAt
-                          ? formatDuration(history.durationMs)
-                          : getCurrentDuration(history.enteredAt)}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-muted-foreground">
+                          Duration:{' '}
+                          {history.exitedAt
+                            ? formatDuration(history.durationMs)
+                            : getCurrentDuration(history.enteredAt)}
+                        </p>
+                        <Badge variant="outline" className="text-xs">
+                          {history.exitedAt
+                            ? `${Math.max(1, Math.ceil((history.durationMs ?? 0) / (1000 * 60 * 60 * 24)))} day${Math.max(1, Math.ceil((history.durationMs ?? 0) / (1000 * 60 * 60 * 24))) !== 1 ? 's' : ''}`
+                            : `${Math.max(1, Math.ceil((Date.now() - new Date(history.enteredAt).getTime()) / (1000 * 60 * 60 * 24)))} day${Math.max(1, Math.ceil((Date.now() - new Date(history.enteredAt).getTime()) / (1000 * 60 * 60 * 24))) !== 1 ? 's' : ''} (ongoing)`}
+                        </Badge>
+                      </div>
                       {history.moveReason && (
                         <p className="text-sm italic text-muted-foreground">
                           Reason: {history.moveReason}
@@ -471,18 +534,63 @@ export function RequestDetail({
             </CardContent>
           </Card>
 
-          {/* Attachments */}
+          {/* Documents by Stage */}
           <Card>
             <CardHeader>
-              <CardTitle>Attachments ({request.attachments.length})</CardTitle>
+              <CardTitle>Documents ({request.attachments.length})</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <AttachmentList
-                attachments={request.attachments}
-                canDelete={canDeleteAttachment}
-              />
-              {canUpload && (
-                <AttachmentUploader requestId={request.id} />
+              {/* Per-stage attachment sections */}
+              {allStages.map((stage) => {
+                const stageAtts = attachmentsByStage.get(stage.id) ?? [];
+                const isCurrent = stage.id === request.currentStage.id;
+                const isVisited = completedStageIds.has(stage.id) || isCurrent;
+                if (!isVisited && stageAtts.length === 0) return null;
+                return (
+                  <div key={stage.id} className="rounded-lg border">
+                    <div className="flex items-center justify-between border-b bg-muted/50 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{stage.name}</span>
+                        {isCurrent && (
+                          <Badge variant="default" className="text-[10px] px-1.5 py-0">Current</Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {stageAtts.length} file{stageAtts.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      {stageAtts.length > 0 ? (
+                        <AttachmentList
+                          attachments={stageAtts}
+                          canDelete={canDeleteAttachment}
+                        />
+                      ) : (
+                        <p className="text-xs text-muted-foreground">No files uploaded</p>
+                      )}
+                      {canUpload && isCurrent && (
+                        <AttachmentUploader requestId={request.id} stageId={stage.id} />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {/* General (legacy) attachments */}
+              {generalAttachments.length > 0 && (
+                <div className="rounded-lg border">
+                  <div className="flex items-center justify-between border-b bg-muted/50 px-3 py-2">
+                    <span className="text-sm font-medium">General</span>
+                    <span className="text-xs text-muted-foreground">
+                      {generalAttachments.length} file{generalAttachments.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="p-3">
+                    <AttachmentList
+                      attachments={generalAttachments}
+                      canDelete={canDeleteAttachment}
+                    />
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>

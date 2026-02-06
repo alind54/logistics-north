@@ -74,7 +74,8 @@ export async function uploadAttachment(
   fileName: string,
   mimeType: string,
   buffer: Buffer,
-  actorUserId: string
+  actorUserId: string,
+  stageId?: string | null
 ): Promise<AttachmentUploadResult> {
   // Validate file
   const validation = validateFile(fileName, mimeType, buffer.length);
@@ -85,11 +86,14 @@ export async function uploadAttachment(
   // Verify the request exists
   const request = await prisma.request.findUnique({
     where: { id: requestId },
-    select: { id: true },
+    select: { id: true, currentStageId: true },
   });
   if (!request) {
     throw new Error('Request not found');
   }
+
+  // Use provided stageId, or fall back to the request's current stage
+  const effectiveStageId = stageId ?? request.currentStageId;
 
   // Generate blob key and upload
   const blobKey = generateBlobKey(requestId, fileName);
@@ -99,6 +103,7 @@ export async function uploadAttachment(
   const attachment = await prisma.attachment.create({
     data: {
       requestId,
+      stageId: effectiveStageId,
       blobKey,
       fileName,
       mimeType,
@@ -113,6 +118,7 @@ export async function uploadAttachment(
     fileName,
     mimeType,
     sizeBytes: buffer.length,
+    stageId: effectiveStageId,
   });
 
   return {
@@ -226,6 +232,7 @@ export async function listAttachments(requestId: string) {
     orderBy: { createdAt: 'desc' },
     include: {
       uploadedBy: { select: { id: true, email: true } },
+      stage: { select: { id: true, name: true } },
     },
   });
 
@@ -236,5 +243,7 @@ export async function listAttachments(requestId: string) {
     sizeBytes: Number(a.sizeBytes),
     createdAt: a.createdAt.toISOString(),
     uploadedBy: a.uploadedBy,
+    stageId: a.stageId ?? null,
+    stageName: a.stage?.name ?? null,
   }));
 }

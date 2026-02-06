@@ -57,7 +57,7 @@ export function CreateRequestDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-full max-w-lg rounded-lg border bg-card p-6 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Create New Request</h2>
+          <h2 className="text-lg font-semibold">Create New Project</h2>
           <button
             type="button"
             onClick={onClose}
@@ -93,7 +93,7 @@ export function CreateRequestDialog({
               id="description"
               value={description}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
-              placeholder="Enter request description..."
+              placeholder="Enter project description..."
               rows={3}
               required
             />
@@ -153,7 +153,7 @@ export function CreateRequestDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting || !description.trim()}>
-              {isSubmitting ? 'Creating...' : 'Create Request'}
+              {isSubmitting ? 'Creating...' : 'Create Project'}
             </Button>
           </div>
         </form>

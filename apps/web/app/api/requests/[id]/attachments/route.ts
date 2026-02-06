@@ -47,6 +47,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Parse multipart form data
     const formData = await request.formData();
     const file = formData.get('file');
+    const stageId = formData.get('stageId') as string | null;
 
     if (!file || !(file instanceof File)) {
       return badRequest('No file provided. Send a "file" field in multipart form data.');
@@ -62,7 +63,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         file.name,
         file.type,
         buffer,
-        user.id
+        user.id,
+        stageId || existing.currentStage.id
       );
 
       return apiSuccess(result, 201);

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getRequestById } from '@/server/requests';
-import { getAvailableTransitions, getStageById } from '@/server/workflow';
+import { getAvailableTransitions, getStageById, listStages } from '@/server/workflow';
 import { getAuditEventsForRequest } from '@/server/audit';
 import { getSession } from '@/server/auth/session';
 import { hasPermission } from '@/server/auth/rbac';
@@ -26,6 +26,9 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
   if (!request) {
     notFound();
   }
+
+  // Fetch all stages for the flow type (for progress bar)
+  const allStages = await listStages(request.flowType as FlowType);
 
   // Fetch available transitions for the current stage
   const transitions = await getAvailableTransitions(
@@ -58,6 +61,7 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
   return (
     <RequestDetail
       request={request}
+      allStages={allStages}
       availableTransitions={transitionsWithStages.filter((t) => t.toStage !== null)}
       auditEvents={
         auditData?.events.map((e) => ({

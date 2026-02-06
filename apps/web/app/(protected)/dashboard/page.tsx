@@ -1,6 +1,7 @@
 import { prisma } from '@/server/db';
 import Link from 'next/link';
 import { ExportToolbar } from '@/components/dashboard/export-toolbar';
+import { formatMrfNumber } from '@request-tracker/shared';
 
 function formatDuration(ms: number): string {
   const hours = Math.floor(ms / (1000 * 60 * 60));
@@ -36,6 +37,7 @@ export default async function DashboardPage() {
       where: { dueDate: { lt: now } },
       select: {
         id: true,
+        mrfNumber: true,
         description: true,
         priority: true,
         dueDate: true,
@@ -73,9 +75,34 @@ export default async function DashboardPage() {
   ]);
 
   // Count overdue separately (findMany might be limited by take)
-  const overdueCount = await prisma.request.count({
-    where: { dueDate: { lt: now } },
-  });
+  const [overdueCount, activeProjects] = await Promise.all([
+    prisma.request.count({
+      where: { dueDate: { lt: now } },
+    }),
+    // Fetch all active projects (not in "Done" stage) for the progress overview
+    prisma.request.findMany({
+      where: {
+        currentStage: { name: { not: 'Done' } },
+      },
+      select: {
+        id: true,
+        mrfNumber: true,
+        description: true,
+        priority: true,
+        flowType: true,
+        createdAt: true,
+        currentStage: { select: { id: true, name: true, orderIndex: true } },
+        owner: { select: { email: true } },
+        stageHistory: {
+          where: { exitedAt: null },
+          select: { enteredAt: true },
+          take: 1,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    }),
+  ]);
 
   const stageMap = new Map(stages.map((s: { id: string; name: string }) => [s.id, s.name]));
 
@@ -126,17 +153,93 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
-            Overview of request tracking metrics
+            Overview of project tracking metrics
           </p>
         </div>
       </div>
 
       <ExportToolbar />
 
+      {/* Project Progress Overview */}
+      {activeProjects.length > 0 && (
+        <div className="rounded-lg border bg-card p-6">
+          <h2 className="mb-4 text-lg font-semibold">Project Progress</h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Track all active projects through their workflow stages
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-3 text-left text-sm font-medium">MRF #</th>
+                  <th className="pb-3 text-left text-sm font-medium">Description</th>
+                  <th className="pb-3 text-left text-sm font-medium">Priority</th>
+                  <th className="pb-3 text-left text-sm font-medium">Current Stage</th>
+                  <th className="pb-3 text-right text-sm font-medium">Days in Stage</th>
+                  <th className="pb-3 text-right text-sm font-medium">Total Days</th>
+                  <th className="hidden pb-3 text-left text-sm font-medium sm:table-cell">Owner</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeProjects.map((project) => {
+                  const enteredAt = project.stageHistory[0]?.enteredAt;
+                  const daysInStage = enteredAt
+                    ? Math.max(1, Math.ceil((now.getTime() - enteredAt.getTime()) / (1000 * 60 * 60 * 24)))
+                    : 0;
+                  const totalDays = Math.max(1, Math.ceil((now.getTime() - project.createdAt.getTime()) / (1000 * 60 * 60 * 24)));
+                  return (
+                    <tr key={project.id} className="border-b last:border-0 hover:bg-muted/50">
+                      <td className="py-3">
+                        <Link href={`/requests/${project.id}`} className="font-mono text-sm font-semibold text-primary hover:underline">
+                          {formatMrfNumber(project.mrfNumber)}
+                        </Link>
+                      </td>
+                      <td className="py-3 text-sm">
+                        {project.description.length > 40
+                          ? `${project.description.substring(0, 40)}...`
+                          : project.description}
+                      </td>
+                      <td className="py-3">
+                        <span className={`rounded px-2 py-1 text-xs ${
+                          project.priority === 'URGENT' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                          project.priority === 'HIGH' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                          project.priority === 'NORMAL' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                          'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                        }`}>
+                          {project.priority}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <span className="rounded bg-muted px-2 py-1 text-xs">{project.currentStage.name}</span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <span className={`text-sm font-medium ${
+                          daysInStage > 7 ? 'text-destructive' :
+                          daysInStage > 3 ? 'text-yellow-600 dark:text-yellow-400' :
+                          'text-muted-foreground'
+                        }`}>
+                          {daysInStage}d
+                        </span>
+                      </td>
+                      <td className="py-3 text-right text-sm text-muted-foreground">
+                        {totalDays}d
+                      </td>
+                      <td className="hidden py-3 text-sm text-muted-foreground sm:table-cell">
+                        {project.owner?.email.split('@')[0] ?? '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border bg-card p-6">
-          <h3 className="text-sm font-medium text-muted-foreground">Total Requests</h3>
+          <h3 className="text-sm font-medium text-muted-foreground">Total Projects</h3>
           <p className="mt-2 text-3xl font-bold">{totalRequests}</p>
         </div>
         <div className="rounded-lg border bg-card p-6">
@@ -148,7 +251,7 @@ export default async function DashboardPage() {
           <p className="mt-2 text-3xl font-bold">{stages.length}</p>
         </div>
         <div className="rounded-lg border bg-card p-6">
-          <h3 className="text-sm font-medium text-muted-foreground">Urgent Requests</h3>
+          <h3 className="text-sm font-medium text-muted-foreground">Urgent Projects</h3>
           <p className="mt-2 text-3xl font-bold text-orange-500">{urgentCount}</p>
         </div>
       </div>
@@ -187,9 +290,9 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Requests by Stage */}
+        {/* Projects by Stage */}
         <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Requests by Stage</h2>
+          <h2 className="mb-4 text-lg font-semibold">Projects by Stage</h2>
           <div className="space-y-2">
             {requestsByStage.map((item: { currentStageId: string; _count: number }) => (
               <div
@@ -201,7 +304,7 @@ export default async function DashboardPage() {
               </div>
             ))}
             {requestsByStage.length === 0 && (
-              <p className="text-muted-foreground">No requests yet</p>
+              <p className="text-muted-foreground">No projects yet</p>
             )}
           </div>
         </div>
@@ -227,7 +330,7 @@ export default async function DashboardPage() {
                     {stage.count > 0 ? formatDuration(stage.avgMs) : '-'}
                   </td>
                   <td className="py-3 text-right text-sm text-muted-foreground">
-                    {stage.count} request{stage.count !== 1 ? 's' : ''}
+                    {stage.count} project{stage.count !== 1 ? 's' : ''}
                   </td>
                 </tr>
               ))}
@@ -240,7 +343,7 @@ export default async function DashboardPage() {
       <div className="rounded-lg border bg-card p-6">
         <h2 className="mb-4 text-lg font-semibold">Aging by Stage</h2>
         <p className="mb-3 text-sm text-muted-foreground">
-          How long requests have been sitting in each stage
+          How long projects have been sitting in each stage
         </p>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -295,12 +398,13 @@ export default async function DashboardPage() {
       {overdueRequests.length > 0 && (
         <div className="rounded-lg border bg-card p-6">
           <h2 className="mb-4 text-lg font-semibold text-destructive">
-            Overdue Requests ({overdueCount})
+            Overdue Projects ({overdueCount})
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
+                  <th className="pb-3 text-left text-sm font-medium">MRF #</th>
                   <th className="pb-3 text-left text-sm font-medium">Description</th>
                   <th className="pb-3 text-left text-sm font-medium">Stage</th>
                   <th className="pb-3 text-left text-sm font-medium">Priority</th>
@@ -309,8 +413,16 @@ export default async function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {overdueRequests.map((req: { id: string; description: string; priority: string; dueDate: Date | null; currentStage: { name: string }; owner: { email: string } | null }) => (
+                {overdueRequests.map((req: { id: string; mrfNumber: number; description: string; priority: string; dueDate: Date | null; currentStage: { name: string }; owner: { email: string } | null }) => (
                   <tr key={req.id} className="border-b last:border-0">
+                    <td className="py-3">
+                      <Link
+                        href={`/requests/${req.id}`}
+                        className="font-mono text-sm font-semibold text-primary hover:underline"
+                      >
+                        {formatMrfNumber(req.mrfNumber)}
+                      </Link>
+                    </td>
                     <td className="py-3">
                       <Link
                         href={`/requests/${req.id}`}

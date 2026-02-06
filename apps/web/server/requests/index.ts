@@ -148,6 +148,7 @@ export async function createRequest(
 
   return {
     id: finalRequest.id,
+    mrfNumber: finalRequest.mrfNumber,
     description: finalRequest.description,
     notes: finalRequest.notes,
     priority: finalRequest.priority as Priority,
@@ -240,6 +241,7 @@ export async function updateRequest(
 
   return {
     id: updated.id,
+    mrfNumber: updated.mrfNumber,
     description: updated.description,
     notes: updated.notes,
     priority: updated.priority as Priority,
@@ -282,6 +284,7 @@ export async function getRequestById(requestId: string): Promise<RequestDetailDT
       attachments: {
         include: {
           uploadedBy: { select: { id: true, email: true } },
+          stage: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'desc' },
       },
@@ -298,6 +301,7 @@ export async function getRequestById(requestId: string): Promise<RequestDetailDT
 
   return {
     id: request.id,
+    mrfNumber: request.mrfNumber,
     description: request.description,
     notes: request.notes,
     priority: request.priority as Priority,
@@ -327,6 +331,8 @@ export async function getRequestById(requestId: string): Promise<RequestDetailDT
       sizeBytes: Number(a.sizeBytes),
       createdAt: a.createdAt.toISOString(),
       uploadedBy: a.uploadedBy,
+      stageId: a.stageId ?? null,
+      stageName: a.stage?.name ?? null,
     })),
     stageHistory: request.stageHistory.map(mapStageHistory),
     createdAt: request.createdAt.toISOString(),
@@ -346,12 +352,21 @@ export async function listRequests(
 ): Promise<PaginatedRequests> {
   const where: Prisma.RequestWhereInput = {};
 
-  // Text search on description + notes
+  // Text search on description + notes + MRF number
   if (filters.query) {
-    where.OR = [
-      { description: { contains: filters.query, mode: 'insensitive' } },
-      { notes: { contains: filters.query, mode: 'insensitive' } },
-    ];
+    const mrfMatch = filters.query.match(/^(?:MRF-?)?(\d+)$/i);
+    if (mrfMatch) {
+      where.OR = [
+        { description: { contains: filters.query, mode: 'insensitive' } },
+        { notes: { contains: filters.query, mode: 'insensitive' } },
+        { mrfNumber: parseInt(mrfMatch[1]!, 10) },
+      ];
+    } else {
+      where.OR = [
+        { description: { contains: filters.query, mode: 'insensitive' } },
+        { notes: { contains: filters.query, mode: 'insensitive' } },
+      ];
+    }
   }
 
   // Stage filter
@@ -409,6 +424,11 @@ export async function listRequests(
         currentStage: { select: { id: true, name: true } },
         owner: { select: { id: true, email: true } },
         tags: { include: { tag: true } },
+        stageHistory: {
+          where: { exitedAt: null },
+          select: { enteredAt: true },
+          take: 1,
+        },
       },
     }),
     prisma.request.count({ where }),
@@ -417,11 +437,13 @@ export async function listRequests(
   return {
     items: items.map((r) => ({
       id: r.id,
+      mrfNumber: r.mrfNumber,
       description: r.description,
       priority: r.priority as Priority,
       dueDate: r.dueDate?.toISOString() ?? null,
       flowType: r.flowType as FlowType,
       currentStage: r.currentStage,
+      currentStageEnteredAt: r.stageHistory[0]?.enteredAt.toISOString() ?? null,
       owner: r.owner,
       tags: r.tags.map((rt) => ({
         id: rt.tag.id,
@@ -487,11 +509,13 @@ export async function listRequestsForBoard(flowType: FlowType): Promise<BoardCol
     if (list) {
       list.push({
         id: r.id,
+        mrfNumber: r.mrfNumber,
         description: r.description,
         priority: r.priority as Priority,
         dueDate: r.dueDate?.toISOString() ?? null,
         flowType: r.flowType as FlowType,
         currentStage: r.currentStage,
+        currentStageEnteredAt: r.stageHistory[0]?.enteredAt.toISOString() ?? null,
         owner: r.owner,
         tags: r.tags.map((rt) => ({
           id: rt.tag.id,

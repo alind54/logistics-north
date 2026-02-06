@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Badge, Button, cn } from '@request-tracker/ui';
 import type { RequestListItemDTO, Priority } from '@request-tracker/shared';
+import { formatMrfNumber } from '@request-tracker/shared';
 
 interface RequestCardProps {
   request: RequestListItemDTO;
@@ -67,6 +68,26 @@ export function RequestCard({
         {request.flowType && (
           <span className="text-xs text-muted-foreground">
             {request.flowType}
+          </span>
+        )}
+      </div>
+
+      {/* MRF Number + Days in Stage */}
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-semibold font-mono text-primary">
+          {formatMrfNumber(request.mrfNumber)}
+        </span>
+        {request.currentStageEnteredAt && (
+          <span className={cn(
+            'text-xs font-medium',
+            (() => {
+              const days = Math.ceil((Date.now() - new Date(request.currentStageEnteredAt).getTime()) / (1000 * 60 * 60 * 24));
+              if (days > 7) return 'text-destructive';
+              if (days > 3) return 'text-yellow-600 dark:text-yellow-400';
+              return 'text-muted-foreground';
+            })()
+          )}>
+            {Math.ceil((Date.now() - new Date(request.currentStageEnteredAt).getTime()) / (1000 * 60 * 60 * 24))}d in stage
           </span>
         )}
       </div>

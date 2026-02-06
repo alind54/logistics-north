@@ -74,6 +74,7 @@ model User {
 
 model Request {
   id             String    @id @default(uuid())
+  mrfNumber      Int       @default(autoincrement()) @unique
   description    String
   notes          String?
   priority       Priority  @default(NORMAL)
@@ -121,6 +122,7 @@ model Stage {
   stageHistory     StageHistory[]
   fromTransitions  Transition[]   @relation("FromStage")
   toTransitions    Transition[]   @relation("ToStage")
+  attachments      Attachment[]
 
   @@index([appliesTo])
   @@index([orderIndex])
@@ -203,6 +205,7 @@ model RequestTag {
 model Attachment {
   id               String   @id @default(uuid())
   requestId        String
+  stageId          String?
   blobKey          String
   fileName         String
   mimeType         String
@@ -212,9 +215,11 @@ model Attachment {
 
   // Relations
   request    Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  stage      Stage?  @relation(fields: [stageId], references: [id])
   uploadedBy User    @relation(fields: [uploadedByUserId], references: [id])
 
   @@index([requestId])
+  @@index([stageId])
   @@map("attachments")
 }
 

@@ -16,8 +16,8 @@ interface HeaderProps {
 }
 
 const navItems = [
-  { href: '/board', label: 'Board' },
-  { href: '/requests', label: 'Requests' },
+  { href: '/board', label: 'Project Board' },
+  { href: '/requests', label: 'Projects' },
   { href: '/dashboard', label: 'Dashboard' },
 ];
 
@@ -43,7 +43,7 @@ export function Header({ user }: HeaderProps) {
         {/* Logo and Desktop Nav */}
         <div className="flex items-center gap-6">
           <Link href="/board" className="font-semibold">
-            Request Tracker
+            Logistics North
           </Link>
           <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
             {allNavItems.map((item) => {

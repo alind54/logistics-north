@@ -201,10 +201,10 @@ export default async function DashboardPage() {
                       </td>
                       <td className="py-3">
                         <span className={`rounded px-2 py-1 text-xs ${
-                          project.priority === 'URGENT' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                          project.priority === 'HIGH' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                          project.priority === 'NORMAL' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                          'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                          project.priority === 'URGENT' ? 'bg-red-500/15 text-red-400' :
+                          project.priority === 'HIGH' ? 'bg-orange-500/15 text-orange-400' :
+                          project.priority === 'NORMAL' ? 'bg-blue-500/15 text-blue-400' :
+                          'bg-slate-500/15 text-slate-300'
                         }`}>
                           {project.priority}
                         </span>
@@ -215,7 +215,7 @@ export default async function DashboardPage() {
                       <td className="py-3 text-right">
                         <span className={`text-sm font-medium ${
                           daysInStage > 7 ? 'text-destructive' :
-                          daysInStage > 3 ? 'text-yellow-600 dark:text-yellow-400' :
+                          daysInStage > 3 ? 'text-yellow-400' :
                           'text-muted-foreground'
                         }`}>
                           {daysInStage}d
@@ -367,22 +367,22 @@ export default async function DashboardPage() {
                   <tr key={stage.id} className="border-b last:border-0">
                     <td className="py-3 font-medium">{stage.name}</td>
                     <td className="py-3 text-center">
-                      <span className="rounded bg-green-100 px-2 py-1 text-xs text-green-700">
+                      <span className="rounded bg-green-500/15 px-2 py-1 text-xs text-green-400">
                         {bucket?.under24h ?? 0}
                       </span>
                     </td>
                     <td className="py-3 text-center">
-                      <span className="rounded bg-yellow-100 px-2 py-1 text-xs text-yellow-700">
+                      <span className="rounded bg-yellow-500/15 px-2 py-1 text-xs text-yellow-400">
                         {bucket?.d1to3 ?? 0}
                       </span>
                     </td>
                     <td className="py-3 text-center">
-                      <span className="rounded bg-orange-100 px-2 py-1 text-xs text-orange-700">
+                      <span className="rounded bg-orange-500/15 px-2 py-1 text-xs text-orange-400">
                         {bucket?.d3to7 ?? 0}
                       </span>
                     </td>
                     <td className="py-3 text-center">
-                      <span className="rounded bg-red-100 px-2 py-1 text-xs text-red-700">
+                      <span className="rounded bg-red-500/15 px-2 py-1 text-xs text-red-400">
                         {bucket?.over7d ?? 0}
                       </span>
                     </td>
@@ -442,10 +442,10 @@ export default async function DashboardPage() {
                       <span
                         className={`rounded px-2 py-1 text-xs ${
                           req.priority === 'URGENT'
-                            ? 'bg-red-100 text-red-700'
+                            ? 'bg-red-500/15 text-red-400'
                             : req.priority === 'HIGH'
-                              ? 'bg-orange-100 text-orange-700'
-                              : 'bg-blue-100 text-blue-700'
+                              ? 'bg-orange-500/15 text-orange-400'
+                              : 'bg-blue-500/15 text-blue-400'
                         }`}
                       >
                         {req.priority}

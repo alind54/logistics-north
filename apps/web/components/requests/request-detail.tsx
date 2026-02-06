@@ -227,7 +227,7 @@ export function RequestDetail({
                   <span className={cn(
                     'text-[10px] leading-tight text-center',
                     isCurrent ? 'font-semibold text-primary' :
-                    isCompleted ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
+                    isCompleted ? 'text-green-400' : 'text-muted-foreground'
                   )}>
                     {stage.name}
                   </span>

@@ -41,9 +41,9 @@ function getEventIcon(eventType: string): string {
 }
 
 function getEventColor(eventType: string): string {
-  if (eventType.includes('CREATED') || eventType.includes('ADDED')) return 'bg-green-100 text-green-700';
-  if (eventType.includes('UPDATED') || eventType.includes('MOVED')) return 'bg-blue-100 text-blue-700';
-  if (eventType.includes('DELETED') || eventType.includes('REMOVED')) return 'bg-red-100 text-red-700';
+  if (eventType.includes('CREATED') || eventType.includes('ADDED')) return 'bg-green-500/15 text-green-400';
+  if (eventType.includes('UPDATED') || eventType.includes('MOVED')) return 'bg-blue-500/15 text-blue-400';
+  if (eventType.includes('DELETED') || eventType.includes('REMOVED')) return 'bg-red-500/15 text-red-400';
   return 'bg-muted text-muted-foreground';
 }
 

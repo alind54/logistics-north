@@ -19,10 +19,10 @@ function formatDate(dateString: string | null): string {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  ADMIN: 'bg-red-100 text-red-700',
-  MANAGER: 'bg-blue-100 text-blue-700',
-  OPERATOR: 'bg-green-100 text-green-700',
-  VIEWER: 'bg-gray-100 text-gray-700',
+  ADMIN: 'bg-red-500/15 text-red-400',
+  MANAGER: 'bg-blue-500/15 text-blue-400',
+  OPERATOR: 'bg-green-500/15 text-green-400',
+  VIEWER: 'bg-gray-500/15 text-gray-400',
 };
 
 export function UsersManager({ initialUsers }: UsersManagerProps) {
@@ -145,11 +145,11 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
       )}
 
       {resetLink && (
-        <div className="mx-6 mt-4 rounded border border-blue-300 bg-blue-50 px-4 py-3 text-sm">
-          <p className="mb-1 font-medium text-blue-800">Password Reset Link Generated</p>
-          <p className="mb-2 text-blue-700">Share this link with the user (expires in 24 hours):</p>
+        <div className="mx-6 mt-4 rounded border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm">
+          <p className="mb-1 font-medium text-blue-300">Password Reset Link Generated</p>
+          <p className="mb-2 text-blue-400">Share this link with the user (expires in 24 hours):</p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 break-all rounded bg-white px-2 py-1 text-xs">{resetLink}</code>
+            <code className="flex-1 break-all rounded bg-muted px-2 py-1 text-xs">{resetLink}</code>
             <Button
               size="sm"
               variant="outline"
@@ -162,7 +162,7 @@ export function UsersManager({ initialUsers }: UsersManagerProps) {
           </div>
           <button
             type="button"
-            className="mt-2 text-xs text-blue-600 hover:underline"
+            className="mt-2 text-xs text-blue-400 hover:underline"
             onClick={() => setResetLink(null)}
           >
             Dismiss

@@ -317,10 +317,10 @@ export function StagesManager({ initialStages }: StagesManagerProps) {
                       <span
                         className={`rounded px-2 py-1 text-xs ${
                           stage.appliesTo === 'BOTH'
-                            ? 'bg-blue-100 text-blue-700'
+                            ? 'bg-blue-500/15 text-blue-400'
                             : stage.appliesTo === 'ORDER'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-purple-100 text-purple-700'
+                              ? 'bg-green-500/15 text-green-400'
+                              : 'bg-purple-500/15 text-purple-400'
                         }`}
                       >
                         {stage.appliesTo}
@@ -330,8 +330,8 @@ export function StagesManager({ initialStages }: StagesManagerProps) {
                       <span
                         className={`rounded px-2 py-1 text-xs ${
                           stage.isActive
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
+                            ? 'bg-green-500/15 text-green-400'
+                            : 'bg-red-500/15 text-red-400'
                         }`}
                       >
                         {stage.isActive ? 'Active' : 'Inactive'}

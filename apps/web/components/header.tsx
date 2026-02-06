@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button, cn } from '@request-tracker/ui';
 import { NotificationBell } from '@/components/notifications/notification-bell';
-import { ThemeToggle } from '@/components/theme-toggle';
 
 interface HeaderProps {
   user: {
@@ -69,7 +68,6 @@ export function Header({ user }: HeaderProps) {
 
         {/* Desktop User Menu */}
         <div className="hidden items-center gap-4 md:flex">
-          <ThemeToggle />
           <NotificationBell />
           <div className="text-right">
             <p className="text-sm font-medium">{user.email}</p>

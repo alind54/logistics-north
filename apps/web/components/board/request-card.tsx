@@ -83,7 +83,7 @@ export function RequestCard({
             (() => {
               const days = Math.ceil((Date.now() - new Date(request.currentStageEnteredAt).getTime()) / (1000 * 60 * 60 * 24));
               if (days > 7) return 'text-destructive';
-              if (days > 3) return 'text-yellow-600 dark:text-yellow-400';
+              if (days > 3) return 'text-yellow-400';
               return 'text-muted-foreground';
             })()
           )}>

@@ -23,6 +23,7 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
   const [dueAfter, setDueAfter] = useState(searchParams.get('dueAfter') ?? '');
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRender = useRef(true);
 
   const applyFilters = useCallback((overrides?: {
     query?: string;
@@ -61,8 +62,12 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
     router.push(pathname);
   }, [router, pathname]);
 
-  // Debounced search - auto-apply after 300ms of no typing
+  // Debounced search - auto-apply after 300ms of no typing (skip initial mount)
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       applyFilters({ query });

@@ -32,7 +32,7 @@ interface AuditEvent {
 }
 
 interface TransitionWithStage extends TransitionDTO {
-  toStage: { id: string; name: string; orderIndex: number } | null;
+  toStage: { id: string; name: string; orderIndex: number };
 }
 
 interface RequestDetailProps {
@@ -116,9 +116,12 @@ export function RequestDetail({
     request.dueDate ? request.dueDate.split('T')[0] : ''
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [moveError, setMoveError] = useState<string | null>(null);
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveError(null);
     try {
       const res = await fetch(`/api/requests/${request.id}`, {
         method: 'PATCH',
@@ -134,7 +137,12 @@ export function RequestDetail({
       if (res.ok) {
         setIsEditing(false);
         router.refresh();
+      } else {
+        const data = await res.json();
+        setSaveError(data.message || 'Failed to save changes');
       }
+    } catch {
+      setSaveError('An error occurred. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -143,6 +151,7 @@ export function RequestDetail({
   const handleMoveStage = async () => {
     if (!selectedStageId) return;
     setIsMoving(true);
+    setMoveError(null);
 
     try {
       const res = await fetch(`/api/requests/${request.id}/move-stage`, {
@@ -158,7 +167,12 @@ export function RequestDetail({
         setSelectedStageId('');
         setMoveReason('');
         router.refresh();
+      } else {
+        const data = await res.json();
+        setMoveError(data.message || 'Failed to move stage');
       }
+    } catch {
+      setMoveError('An error occurred. Please try again.');
     } finally {
       setIsMoving(false);
     }
@@ -239,8 +253,8 @@ export function RequestDetail({
                 >
                   <option value="">Move to...</option>
                   {availableTransitions.map((t) => (
-                    <option key={t.toStage!.id} value={t.toStage!.id}>
-                      {t.toStage!.name}
+                    <option key={t.toStage.id} value={t.toStage.id}>
+                      {t.toStage.name}
                     </option>
                   ))}
                 </Select>
@@ -263,8 +277,11 @@ export function RequestDetail({
                 )}
               </div>
             )}
+            {moveError && (
+              <p className="text-sm text-destructive">{moveError}</p>
+            )}
             {canEdit && !isEditing && (
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+              <Button variant="outline" size="sm" onClick={() => { setIsEditing(true); setSaveError(null); }}>
                 Edit
               </Button>
             )}
@@ -325,6 +342,11 @@ export function RequestDetail({
         <div className="space-y-6">
           {isEditing ? (
             <div className="space-y-4 rounded-lg border bg-card p-6">
+              {saveError && (
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  {saveError}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
@@ -370,7 +392,7 @@ export function RequestDetail({
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setIsEditing(false)}
+                  onClick={() => { setIsEditing(false); setSaveError(null); }}
                   disabled={isSaving}
                 >
                   Cancel

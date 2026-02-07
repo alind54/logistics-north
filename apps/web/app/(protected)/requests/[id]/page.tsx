@@ -45,7 +45,9 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
     <RequestDetail
       request={request}
       allStages={allStages}
-      availableTransitions={transitions.filter((t) => t.toStage !== null)}
+      availableTransitions={transitions.filter(
+        (t): t is typeof t & { toStage: NonNullable<typeof t.toStage> } => t.toStage !== null
+      )}
       auditEvents={
         auditData?.events.map((e) => ({
           id: e.id,

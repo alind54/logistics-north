@@ -54,8 +54,23 @@ export function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
-    return () => clearInterval(interval);
+    let interval = setInterval(fetchNotifications, 30000);
+
+    // Pause polling when tab is inactive, resume on focus
+    function handleVisibility() {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        fetchNotifications();
+        interval = setInterval(fetchNotifications, 30000);
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchNotifications]);
 
   // Close dropdown when clicking outside

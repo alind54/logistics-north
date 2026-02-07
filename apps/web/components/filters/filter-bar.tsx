@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button, Input, Select } from '@request-tracker/ui';
 import type { StageDTO } from '@request-tracker/shared';
@@ -22,14 +22,30 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
   const [dueBefore, setDueBefore] = useState(searchParams.get('dueBefore') ?? '');
   const [dueAfter, setDueAfter] = useState(searchParams.get('dueAfter') ?? '');
 
-  const applyFilters = useCallback(() => {
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const applyFilters = useCallback((overrides?: {
+    query?: string;
+    stageId?: string;
+    priority?: string;
+    flowType?: string;
+    dueBefore?: string;
+    dueAfter?: string;
+  }) => {
+    const q = overrides?.query ?? query;
+    const s = overrides?.stageId ?? stageId;
+    const p = overrides?.priority ?? priority;
+    const f = overrides?.flowType ?? flowType;
+    const db = overrides?.dueBefore ?? dueBefore;
+    const da = overrides?.dueAfter ?? dueAfter;
+
     const params = new URLSearchParams();
-    if (query) params.set('query', query);
-    if (stageId) params.set('stageId', stageId);
-    if (priority) params.set('priority', priority);
-    if (flowType) params.set('flowType', flowType);
-    if (dueBefore) params.set('dueBefore', dueBefore);
-    if (dueAfter) params.set('dueAfter', dueAfter);
+    if (q) params.set('query', q);
+    if (s) params.set('stageId', s);
+    if (p) params.set('priority', p);
+    if (f) params.set('flowType', f);
+    if (db) params.set('dueBefore', db);
+    if (da) params.set('dueAfter', da);
     params.set('page', '1');
 
     router.push(`${pathname}?${params.toString()}`);
@@ -45,19 +61,58 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
     router.push(pathname);
   }, [router, pathname]);
 
+  // Debounced search - auto-apply after 300ms of no typing
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      applyFilters({ query });
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // Only trigger on query changes, not on every applyFilters reference change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
+  // Auto-apply handlers for dropdowns and date inputs
+  const handleStageChange = (value: string) => {
+    setStageId(value);
+    applyFilters({ stageId: value });
+  };
+
+  const handlePriorityChange = (value: string) => {
+    setPriority(value);
+    applyFilters({ priority: value });
+  };
+
+  const handleFlowTypeChange = (value: string) => {
+    setFlowType(value);
+    applyFilters({ flowType: value });
+  };
+
+  const handleDueAfterChange = (value: string) => {
+    setDueAfter(value);
+    applyFilters({ dueAfter: value });
+  };
+
+  const handleDueBeforeChange = (value: string) => {
+    setDueBefore(value);
+    applyFilters({ dueBefore: value });
+  };
+
   const hasActiveFilters = query || stageId || priority || flowType || dueBefore || dueAfter;
 
   // Active filter chips
   const chips: { label: string; onRemove: () => void }[] = [];
-  if (query) chips.push({ label: `Search: "${query}"`, onRemove: () => setQuery('') });
+  if (query) chips.push({ label: `Search: "${query}"`, onRemove: () => { setQuery(''); applyFilters({ query: '' }); } });
   if (stageId) {
     const stageName = stages.find((s) => s.id === stageId)?.name ?? 'Unknown';
-    chips.push({ label: `Stage: ${stageName}`, onRemove: () => setStageId('') });
+    chips.push({ label: `Stage: ${stageName}`, onRemove: () => { setStageId(''); applyFilters({ stageId: '' }); } });
   }
-  if (priority) chips.push({ label: `Priority: ${priority}`, onRemove: () => setPriority('') });
-  if (flowType) chips.push({ label: `Flow: ${flowType}`, onRemove: () => setFlowType('') });
-  if (dueBefore) chips.push({ label: `Due before: ${dueBefore}`, onRemove: () => setDueBefore('') });
-  if (dueAfter) chips.push({ label: `Due after: ${dueAfter}`, onRemove: () => setDueAfter('') });
+  if (priority) chips.push({ label: `Priority: ${priority}`, onRemove: () => { setPriority(''); applyFilters({ priority: '' }); } });
+  if (flowType) chips.push({ label: `Flow: ${flowType}`, onRemove: () => { setFlowType(''); applyFilters({ flowType: '' }); } });
+  if (dueBefore) chips.push({ label: `Due before: ${dueBefore}`, onRemove: () => { setDueBefore(''); applyFilters({ dueBefore: '' }); } });
+  if (dueAfter) chips.push({ label: `Due after: ${dueAfter}`, onRemove: () => { setDueAfter(''); applyFilters({ dueAfter: '' }); } });
 
   return (
     <div className="space-y-3">
@@ -69,7 +124,6 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
             placeholder="Search description or notes..."
             value={query}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-            onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && applyFilters()}
           />
         </div>
 
@@ -78,7 +132,7 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
           <label className="text-xs font-medium text-muted-foreground">Stage</label>
           <Select
             value={stageId}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStageId(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleStageChange(e.target.value)}
           >
             <option value="">All stages</option>
             {stages.map((s) => (
@@ -94,7 +148,7 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
           <label className="text-xs font-medium text-muted-foreground">Priority</label>
           <Select
             value={priority}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setPriority(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handlePriorityChange(e.target.value)}
           >
             <option value="">All</option>
             <option value="LOW">Low</option>
@@ -110,7 +164,7 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
             <label className="text-xs font-medium text-muted-foreground">Flow Type</label>
             <Select
               value={flowType}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFlowType(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFlowTypeChange(e.target.value)}
             >
               <option value="">All</option>
               <option value="ORDER">Order</option>
@@ -125,7 +179,7 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
           <Input
             type="date"
             value={dueAfter}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDueAfter(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleDueAfterChange(e.target.value)}
           />
         </div>
 
@@ -134,19 +188,16 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
           <Input
             type="date"
             value={dueBefore}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDueBefore(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleDueBeforeChange(e.target.value)}
           />
         </div>
 
-        {/* Buttons */}
-        <div className="flex gap-2">
-          <Button size="sm" onClick={applyFilters}>Apply</Button>
-          {hasActiveFilters && (
-            <Button size="sm" variant="outline" onClick={clearFilters}>
-              Clear
-            </Button>
-          )}
-        </div>
+        {/* Clear button - only when filters are active */}
+        {hasActiveFilters && (
+          <Button size="sm" variant="outline" onClick={clearFilters}>
+            Clear
+          </Button>
+        )}
       </div>
 
       {/* Active filter chips */}
@@ -161,11 +212,7 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
               <button
                 type="button"
                 className="ml-1 rounded-full hover:bg-accent"
-                onClick={() => {
-                  chip.onRemove();
-                  // Auto-apply after removing a chip
-                  setTimeout(applyFilters, 0);
-                }}
+                onClick={chip.onRemove}
                 aria-label={`Remove filter: ${chip.label}`}
               >
                 <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

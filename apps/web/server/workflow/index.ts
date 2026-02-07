@@ -62,10 +62,14 @@ export async function listAllStages(): Promise<StageDTO[]> {
 // GET TRANSITIONS FOR STAGE
 // ============================================================================
 
+export interface TransitionWithStage extends TransitionDTO {
+  toStage: { id: string; name: string; orderIndex: number } | null;
+}
+
 export async function getAvailableTransitions(
   fromStageId: string,
   flowType: FlowType
-): Promise<TransitionDTO[]> {
+): Promise<TransitionWithStage[]> {
   const transitions = await prisma.transition.findMany({
     where: {
       fromStageId,
@@ -76,12 +80,12 @@ export async function getAvailableTransitions(
     },
     include: {
       toStage: {
-        select: { isActive: true },
+        select: { id: true, name: true, orderIndex: true, isActive: true },
       },
     },
   });
 
-  // Only return transitions to active stages
+  // Only return transitions to active stages, include toStage data to avoid N+1
   return transitions
     .filter((t) => t.toStage.isActive)
     .map((t) => ({
@@ -90,6 +94,11 @@ export async function getAvailableTransitions(
       toStageId: t.toStageId,
       appliesTo: t.appliesTo as AppliesTo,
       isActive: t.isActive,
+      toStage: {
+        id: t.toStage.id,
+        name: t.toStage.name,
+        orderIndex: t.toStage.orderIndex,
+      },
     }));
 }
 

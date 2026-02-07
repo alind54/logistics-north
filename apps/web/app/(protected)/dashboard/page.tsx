@@ -23,14 +23,17 @@ function formatDate(date: Date): string {
 export default async function DashboardPage() {
   const now = new Date();
 
-  // Fetch all dashboard data in parallel
+  // Fetch ALL dashboard data in a single parallel batch
   const [
     totalRequests,
     overdueRequests,
+    overdueCount,
     requestsByPriority,
     requestsByStage,
     stages,
     stageHistories,
+    activeProjects,
+    openHistories,
   ] = await Promise.all([
     prisma.request.count(),
     prisma.request.findMany({
@@ -47,6 +50,9 @@ export default async function DashboardPage() {
       orderBy: { dueDate: 'asc' },
       take: 20,
     }),
+    prisma.request.count({
+      where: { dueDate: { lt: now } },
+    }),
     prisma.request.groupBy({
       by: ['priority'],
       _count: true,
@@ -60,7 +66,6 @@ export default async function DashboardPage() {
       orderBy: { orderIndex: 'asc' },
       select: { id: true, name: true },
     }),
-    // Completed stage_history entries from the last 30 days for avg time calculations
     prisma.stageHistory.findMany({
       where: {
         exitedAt: { not: null },
@@ -72,14 +77,6 @@ export default async function DashboardPage() {
         exitedAt: true,
       },
     }),
-  ]);
-
-  // Count overdue separately (findMany might be limited by take)
-  const [overdueCount, activeProjects] = await Promise.all([
-    prisma.request.count({
-      where: { dueDate: { lt: now } },
-    }),
-    // Fetch all active projects (not in "Done" stage) for the progress overview
     prisma.request.findMany({
       where: {
         currentStage: { name: { not: 'Done' } },
@@ -101,6 +98,13 @@ export default async function DashboardPage() {
       },
       orderBy: { createdAt: 'desc' },
       take: 50,
+    }),
+    prisma.stageHistory.findMany({
+      where: { exitedAt: null },
+      select: {
+        stageId: true,
+        enteredAt: true,
+      },
     }),
   ]);
 
@@ -124,15 +128,7 @@ export default async function DashboardPage() {
     return { name: stage.name, avgMs: avg, count: durations.length };
   });
 
-  // Calculate aging by stage (current open stage_history entries)
-  const openHistories = await prisma.stageHistory.findMany({
-    where: { exitedAt: null },
-    select: {
-      stageId: true,
-      enteredAt: true,
-    },
-  });
-
+  // Calculate aging by stage
   const agingBuckets = new Map<string, { under24h: number; d1to3: number; d3to7: number; over7d: number }>();
   for (const oh of openHistories) {
     const ageMs = now.getTime() - oh.enteredAt.getTime();
@@ -152,21 +148,37 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Overview of project tracking metrics
           </p>
         </div>
+        <ExportToolbar />
       </div>
 
-      <ExportToolbar />
+      {/* Summary Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-lg border bg-card p-5">
+          <h3 className="text-xs font-medium text-muted-foreground">Total Projects</h3>
+          <p className="mt-1 text-3xl font-bold">{totalRequests}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-5">
+          <h3 className="text-xs font-medium text-muted-foreground">Overdue</h3>
+          <p className="mt-1 text-3xl font-bold text-destructive">{overdueCount}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-5">
+          <h3 className="text-xs font-medium text-muted-foreground">Active Stages</h3>
+          <p className="mt-1 text-3xl font-bold">{stages.length}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-5">
+          <h3 className="text-xs font-medium text-muted-foreground">Urgent Projects</h3>
+          <p className="mt-1 text-3xl font-bold text-orange-500">{urgentCount}</p>
+        </div>
+      </div>
 
-      {/* Project Progress Overview */}
+      {/* Main content: Active Projects (full width) */}
       {activeProjects.length > 0 && (
         <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Project Progress</h2>
-          <p className="mb-3 text-sm text-muted-foreground">
-            Track all active projects through their workflow stages
-          </p>
+          <h2 className="mb-4 text-lg font-semibold">Active Projects</h2>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -236,28 +248,8 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg border bg-card p-6">
-          <h3 className="text-sm font-medium text-muted-foreground">Total Projects</h3>
-          <p className="mt-2 text-3xl font-bold">{totalRequests}</p>
-        </div>
-        <div className="rounded-lg border bg-card p-6">
-          <h3 className="text-sm font-medium text-muted-foreground">Overdue</h3>
-          <p className="mt-2 text-3xl font-bold text-destructive">{overdueCount}</p>
-        </div>
-        <div className="rounded-lg border bg-card p-6">
-          <h3 className="text-sm font-medium text-muted-foreground">Active Stages</h3>
-          <p className="mt-2 text-3xl font-bold">{stages.length}</p>
-        </div>
-        <div className="rounded-lg border bg-card p-6">
-          <h3 className="text-sm font-medium text-muted-foreground">Urgent Projects</h3>
-          <p className="mt-2 text-3xl font-bold text-orange-500">{urgentCount}</p>
-        </div>
-      </div>
-
+      {/* Two-column: Priority Distribution + Projects by Stage */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Priority Distribution */}
         <div className="rounded-lg border bg-card p-6">
           <h2 className="mb-4 text-lg font-semibold">Priority Distribution</h2>
           <div className="space-y-3">
@@ -290,7 +282,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Projects by Stage */}
         <div className="rounded-lg border bg-card p-6">
           <h2 className="mb-4 text-lg font-semibold">Projects by Stage</h2>
           <div className="space-y-2">
@@ -310,10 +301,12 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Average Time Per Stage (last 30 days) */}
-      <div className="rounded-lg border bg-card p-6">
-        <h2 className="mb-4 text-lg font-semibold">Average Time Per Stage (Last 30 Days)</h2>
-        <div className="overflow-x-auto">
+      {/* Collapsible: Average Time Per Stage */}
+      <details className="rounded-lg border bg-card">
+        <summary className="cursor-pointer px-6 py-4 text-lg font-semibold hover:bg-muted/50">
+          Average Time Per Stage (Last 30 Days)
+        </summary>
+        <div className="overflow-x-auto border-t px-6 pb-6 pt-4">
           <table className="w-full">
             <thead>
               <tr className="border-b">
@@ -337,15 +330,17 @@ export default async function DashboardPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </details>
 
-      {/* Aging by Stage */}
-      <div className="rounded-lg border bg-card p-6">
-        <h2 className="mb-4 text-lg font-semibold">Aging by Stage</h2>
-        <p className="mb-3 text-sm text-muted-foreground">
-          How long projects have been sitting in each stage
-        </p>
-        <div className="overflow-x-auto">
+      {/* Collapsible: Aging by Stage */}
+      <details className="rounded-lg border bg-card">
+        <summary className="cursor-pointer px-6 py-4 text-lg font-semibold hover:bg-muted/50">
+          Aging by Stage
+        </summary>
+        <div className="overflow-x-auto border-t px-6 pb-6 pt-4">
+          <p className="mb-3 text-sm text-muted-foreground">
+            How long projects have been sitting in each stage
+          </p>
           <table className="w-full">
             <thead>
               <tr className="border-b">
@@ -392,15 +387,15 @@ export default async function DashboardPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </details>
 
-      {/* Overdue Requests List */}
+      {/* Collapsible: Overdue Projects (auto-open if any exist) */}
       {overdueRequests.length > 0 && (
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold text-destructive">
+        <details open className="rounded-lg border bg-card">
+          <summary className="cursor-pointer px-6 py-4 text-lg font-semibold text-destructive hover:bg-muted/50">
             Overdue Projects ({overdueCount})
-          </h2>
-          <div className="overflow-x-auto">
+          </summary>
+          <div className="overflow-x-auto border-t px-6 pb-6 pt-4">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -462,7 +457,7 @@ export default async function DashboardPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </details>
       )}
     </div>
   );

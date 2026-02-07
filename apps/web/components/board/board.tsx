@@ -2,8 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core';
 import { Button, Select } from '@request-tracker/ui';
 import { BoardColumn } from './board-column';
+import { RequestCard } from './request-card';
 import { CreateRequestDialog } from './create-request-dialog';
 import type { FlowType, RequestListItemDTO } from '@request-tracker/shared';
 import { useBoardEvents } from '@/hooks/use-board-events';
@@ -28,6 +38,25 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
   const [columns, setColumns] = useState<BoardColumn[]>(initialColumns);
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  // DnD sensors - require 8px movement before drag starts
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  // Auto-dismiss error after 5 seconds
+  useEffect(() => {
+    if (moveError) {
+      const timer = setTimeout(() => setMoveError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [moveError]);
 
   // Fetch board data when flow type changes
   const fetchBoard = useCallback(async (ft: FlowType) => {
@@ -60,6 +89,7 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
 
   // Handle moving a request to a new stage
   const handleMoveRequest = async (requestId: string, toStageId: string) => {
+    setMoveError(null);
     try {
       const res = await fetch(`/api/requests/${requestId}/move-stage`, {
         method: 'POST',
@@ -101,13 +131,49 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
           return newColumns;
         });
       } else {
-        // If failed, refresh the board
+        // Parse error and show to user
+        try {
+          const body = await res.json();
+          setMoveError(body.message || 'Failed to move project');
+        } catch {
+          setMoveError('Failed to move project');
+        }
         fetchBoard(flowType);
       }
     } catch (error) {
       console.error('Failed to move request:', error);
+      setMoveError('Failed to move project. Please try again.');
       fetchBoard(flowType);
     }
+  };
+
+  // DnD handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+
+    const requestId = active.id as string;
+    const toStageId = over.id as string;
+
+    // Find which column the request is currently in
+    const currentColumn = columns.find((col) =>
+      col.requests.some((r) => r.id === requestId)
+    );
+
+    // Don't move if dropped on the same column
+    if (currentColumn && currentColumn.stage.id === toStageId) return;
+
+    handleMoveRequest(requestId, toStageId);
+  };
+
+  const handleDragCancel = () => {
+    setActiveId(null);
   };
 
   // Handle request created
@@ -122,6 +188,11 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
     id: c.stage.id,
     name: c.stage.name,
   }));
+
+  // Find the active request for DragOverlay
+  const activeRequest = activeId
+    ? columns.flatMap((c) => c.requests).find((r) => r.id === activeId)
+    : null;
 
   return (
     <div className="flex h-full flex-col">
@@ -143,19 +214,51 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
         </Button>
       </div>
 
-      {/* Board Columns */}
-      <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
-        {columns.map((column) => (
-          <BoardColumn
-            key={column.stage.id}
-            stage={column.stage}
-            requests={column.requests}
-            onMoveRequest={handleMoveRequest}
-            availableStages={allStages}
-            isLoading={isLoading}
-          />
-        ))}
-      </div>
+      {/* Error Banner */}
+      {moveError && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+          <span>{moveError}</span>
+          <button
+            type="button"
+            className="ml-4 text-xs hover:underline"
+            onClick={() => setMoveError(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Board Columns with DnD */}
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
+          {columns.map((column) => (
+            <BoardColumn
+              key={column.stage.id}
+              stage={column.stage}
+              requests={column.requests}
+              onMoveRequest={handleMoveRequest}
+              availableStages={allStages}
+              isLoading={isLoading}
+            />
+          ))}
+        </div>
+
+        <DragOverlay>
+          {activeRequest ? (
+            <RequestCard
+              request={activeRequest}
+              onMove={() => {}}
+              availableStages={[]}
+              isDragOverlay
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Create Request Dialog */}
       {showCreateDialog && (

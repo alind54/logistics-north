@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Badge, Button, cn } from '@request-tracker/ui';
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { cn } from '@request-tracker/ui';
 import type { RequestListItemDTO, Priority } from '@request-tracker/shared';
 import { formatMrfNumber } from '@request-tracker/shared';
 
@@ -10,13 +12,14 @@ interface RequestCardProps {
   request: RequestListItemDTO;
   onMove: (requestId: string, toStageId: string) => void;
   availableStages: Array<{ id: string; name: string }>;
+  isDragOverlay?: boolean;
 }
 
-const priorityVariant: Record<Priority, 'low' | 'normal' | 'high' | 'urgent'> = {
-  LOW: 'low',
-  NORMAL: 'normal',
-  HIGH: 'high',
-  URGENT: 'urgent',
+const priorityColors: Record<Priority, string> = {
+  LOW: 'bg-slate-400',
+  NORMAL: 'bg-blue-400',
+  HIGH: 'bg-orange-400',
+  URGENT: 'bg-red-400',
 };
 
 function formatDate(dateString: string | null): string {
@@ -33,13 +36,34 @@ function isOverdue(dateString: string | null): boolean {
   return new Date(dateString) < new Date();
 }
 
+function getDaysInStage(enteredAt: string | null): number {
+  if (!enteredAt) return 0;
+  return Math.ceil((Date.now() - new Date(enteredAt).getTime()) / (1000 * 60 * 60 * 24));
+}
+
 export function RequestCard({
   request,
   onMove,
   availableStages,
+  isDragOverlay = false,
 }: RequestCardProps) {
   const [showMoveMenu, setShowMoveMenu] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: request.id,
+    data: { request },
+  });
+
+  const style = transform
+    ? { transform: CSS.Translate.toString(transform) }
+    : undefined;
 
   const handleMove = async (toStageId: string) => {
     setIsMoving(true);
@@ -52,85 +76,59 @@ export function RequestCard({
   };
 
   const overdue = isOverdue(request.dueDate);
+  const daysInStage = getDaysInStage(request.currentStageEnteredAt);
 
   return (
     <div
+      ref={!isDragOverlay ? setNodeRef : undefined}
+      style={style}
+      {...(!isDragOverlay ? { ...attributes, ...listeners } : {})}
       className={cn(
-        'group relative rounded-lg border bg-card p-3 shadow-sm transition-shadow hover:shadow-md',
+        'group relative rounded-lg border bg-card px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing',
+        isDragging && 'opacity-30',
+        isDragOverlay && 'shadow-lg ring-2 ring-primary/30',
         isMoving && 'opacity-50'
       )}
     >
-      {/* Priority Badge */}
-      <div className="mb-2 flex items-center justify-between">
-        <Badge variant={priorityVariant[request.priority]} className="text-xs">
-          {request.priority}
-        </Badge>
-        {request.flowType && (
-          <span className="text-xs text-muted-foreground">
-            {request.flowType}
-          </span>
-        )}
-      </div>
-
-      {/* MRF Number + Days in Stage */}
+      {/* Row 1: MRF + Priority dot */}
       <div className="mb-1 flex items-center justify-between">
         <span className="text-xs font-semibold font-mono text-primary">
           {formatMrfNumber(request.mrfNumber)}
         </span>
-        {request.currentStageEnteredAt && (
-          <span className={cn(
-            'text-xs font-medium',
-            (() => {
-              const days = Math.ceil((Date.now() - new Date(request.currentStageEnteredAt).getTime()) / (1000 * 60 * 60 * 24));
-              if (days > 7) return 'text-destructive';
-              if (days > 3) return 'text-yellow-400';
-              return 'text-muted-foreground';
-            })()
-          )}>
-            {Math.ceil((Date.now() - new Date(request.currentStageEnteredAt).getTime()) / (1000 * 60 * 60 * 24))}d in stage
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          <span className={cn('h-2 w-2 rounded-full', priorityColors[request.priority])} title={request.priority} />
+        </div>
       </div>
 
-      {/* Description */}
+      {/* Row 2: Description */}
       <Link
         href={`/requests/${request.id}`}
-        className="mb-2 block text-sm font-medium hover:text-primary"
+        className="mb-1.5 block text-sm font-medium leading-snug hover:text-primary"
+        onClick={(e) => {
+          if (isDragging) e.preventDefault();
+        }}
       >
-        {request.description.length > 80
-          ? `${request.description.substring(0, 80)}...`
+        {request.description.length > 60
+          ? `${request.description.substring(0, 60)}...`
           : request.description}
       </Link>
 
-      {/* Tags */}
-      {request.tags.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-1">
-          {request.tags.slice(0, 3).map((tag) => (
-            <span
-              key={tag.id}
-              className="inline-flex items-center rounded px-1.5 py-0.5 text-xs"
-              style={{
-                backgroundColor: tag.color ? `${tag.color}20` : undefined,
-                color: tag.color ?? undefined,
-              }}
-            >
-              {tag.name}
-            </span>
-          ))}
-          {request.tags.length > 3 && (
-            <span className="text-xs text-muted-foreground">
-              +{request.tags.length - 3}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Footer */}
+      {/* Row 3: Due date + Days in stage + Owner */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           {request.dueDate && (
             <span className={cn(overdue && 'font-medium text-destructive')}>
-              Due {formatDate(request.dueDate)}
+              {overdue ? 'Overdue' : `Due ${formatDate(request.dueDate)}`}
+            </span>
+          )}
+          {daysInStage > 0 && (
+            <span className={cn(
+              'font-medium',
+              daysInStage > 7 ? 'text-destructive' :
+              daysInStage > 3 ? 'text-yellow-400' :
+              'text-muted-foreground'
+            )}>
+              {daysInStage}d
             </span>
           )}
         </div>
@@ -141,20 +139,22 @@ export function RequestCard({
         )}
       </div>
 
-      {/* Move Button (visible on hover or always on mobile) */}
-      <div className="mt-2 flex justify-end">
+      {/* Move button - visible on hover */}
+      <div className="mt-1.5 flex justify-end">
         <div className="relative">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs opacity-0 transition-opacity group-hover:opacity-100 md:opacity-0"
-            onClick={() => setShowMoveMenu(!showMoveMenu)}
+          <button
+            type="button"
+            className="rounded border px-2 py-0.5 text-[11px] text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMoveMenu(!showMoveMenu);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
             disabled={isMoving || availableStages.length === 0}
           >
             Move
-          </Button>
+          </button>
 
-          {/* Move Menu (Mobile-friendly) */}
           {showMoveMenu && (
             <>
               <div
@@ -168,8 +168,10 @@ export function RequestCard({
                 {availableStages.map((stage) => (
                   <button
                     key={stage.id}
+                    type="button"
                     className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
                     onClick={() => handleMove(stage.id)}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     {stage.name}
                   </button>
@@ -178,19 +180,6 @@ export function RequestCard({
             </>
           )}
         </div>
-      </div>
-
-      {/* Mobile: Always show move button */}
-      <div className="mt-2 md:hidden">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 w-full text-xs"
-          onClick={() => setShowMoveMenu(!showMoveMenu)}
-          disabled={isMoving || availableStages.length === 0}
-        >
-          Move to Stage
-        </Button>
       </div>
     </div>
   );

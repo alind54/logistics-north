@@ -101,6 +101,7 @@ model Request {
   @@index([dueDate])
   @@index([createdByUserId])
   @@index([ownerUserId])
+  @@index([flowType, currentStageId])
   @@map("requests")
 }
 
@@ -168,6 +169,8 @@ model StageHistory {
   @@index([requestId])
   @@index([stageId])
   @@index([exitedAt])
+  @@index([requestId, exitedAt])
+  @@index([stageId, exitedAt])
   @@map("stage_history")
 }
 
@@ -284,5 +287,6 @@ model AuditEvent {
   @@index([actorUserId])
   @@index([eventType])
   @@index([createdAt])
+  @@index([requestId, createdAt])
   @@map("audit_events")
 }

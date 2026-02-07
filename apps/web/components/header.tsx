@@ -38,7 +38,7 @@ export function Header({ user }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 border-b bg-card">
-      <div className="container flex h-14 items-center justify-between">
+      <div className="container flex h-12 items-center justify-between">
         {/* Logo and Desktop Nav */}
         <div className="flex items-center gap-6">
           <Link href="/board" className="font-semibold">

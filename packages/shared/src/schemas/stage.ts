@@ -25,14 +25,14 @@ export const stageUpdateSchema = z.object({
 export type StageUpdateSchema = z.infer<typeof stageUpdateSchema>;
 
 export const stageReorderSchema = z.object({
-  stageIds: z.array(z.string().uuid()).min(1),
+  stageIds: z.array(z.string().min(1)).min(1),
 });
 
 export type StageReorderSchema = z.infer<typeof stageReorderSchema>;
 
 export const transitionCreateSchema = z.object({
-  fromStageId: z.string().uuid(),
-  toStageId: z.string().uuid(),
+  fromStageId: z.string().min(1),
+  toStageId: z.string().min(1),
   appliesTo: appliesToSchema,
 });
 

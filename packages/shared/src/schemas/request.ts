@@ -33,7 +33,7 @@ export const requestUpdateSchema = z.object({
 export type RequestUpdateSchema = z.infer<typeof requestUpdateSchema>;
 
 export const moveStageSchema = z.object({
-  toStageId: z.string().uuid('Invalid stage ID'),
+  toStageId: z.string().min(1, 'Stage ID is required'),
   reason: z.string().max(1000).optional(),
 });
 
@@ -41,7 +41,7 @@ export type MoveStageSchema = z.infer<typeof moveStageSchema>;
 
 export const requestFiltersSchema = z.object({
   query: z.string().max(200).optional(),
-  stageId: z.string().uuid().optional(),
+  stageId: z.string().min(1).optional(),
   tagIds: z.array(z.string().uuid()).optional(),
   priority: prioritySchema.optional(),
   flowType: flowTypeSchema.optional(),

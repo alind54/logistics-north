@@ -152,7 +152,7 @@ export async function moveStage(
   actorUserId: string,
   reason?: string
 ): Promise<MoveStageResult> {
-  // Get the request with current stage
+  // Get the request with current stage (for validation before locking)
   const request = await prisma.request.findUnique({
     where: { id: requestId },
     include: {
@@ -188,38 +188,59 @@ export async function moveStage(
 
   const now = new Date();
 
-  // Execute the move in a transaction
-  await prisma.$transaction(async (tx) => {
-    // Close the current stage history entry
-    await tx.stageHistory.updateMany({
-      where: {
-        requestId,
-        exitedAt: null,
-      },
-      data: {
-        exitedAt: now,
-      },
-    });
+  // Execute the move in a transaction with row locking to prevent race conditions
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Lock the request row to prevent concurrent moves (FOR UPDATE)
+      const locked = await tx.$queryRaw<Array<{ currentStageId: string }>>`
+        SELECT "currentStageId" FROM requests WHERE id = ${requestId} FOR UPDATE
+      `;
 
-    // Create new stage history entry
-    await tx.stageHistory.create({
-      data: {
-        requestId,
-        stageId: toStageId,
-        actorUserId,
-        enteredAt: now,
-        moveReason: reason ?? null,
-      },
-    });
+      if (!locked[0]) {
+        throw new Error('Request not found during lock');
+      }
 
-    // Update the request's current stage
-    await tx.request.update({
-      where: { id: requestId },
-      data: {
-        currentStageId: toStageId,
-      },
+      // Verify stage hasn't been changed by a concurrent move
+      if (locked[0].currentStageId !== fromStageId) {
+        throw new Error('Request was moved by another user');
+      }
+
+      // Close the current stage history entry
+      await tx.stageHistory.updateMany({
+        where: {
+          requestId,
+          exitedAt: null,
+        },
+        data: {
+          exitedAt: now,
+        },
+      });
+
+      // Create new stage history entry
+      await tx.stageHistory.create({
+        data: {
+          requestId,
+          stageId: toStageId,
+          actorUserId,
+          enteredAt: now,
+          moveReason: reason ?? null,
+        },
+      });
+
+      // Update the request's current stage
+      await tx.request.update({
+        where: { id: requestId },
+        data: {
+          currentStageId: toStageId,
+        },
+      });
     });
-  });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Request was moved by another user') {
+      return { success: false, error: error.message };
+    }
+    throw error;
+  }
 
   // Create audit event
   await createAuditEvent(AuditEventType.STAGE_MOVED, actorUserId, requestId, {

@@ -17,6 +17,7 @@ interface HeaderProps {
 const navItems = [
   { href: '/board', label: 'Project Board' },
   { href: '/requests', label: 'Projects' },
+  { href: '/todos', label: 'To-Do List' },
   { href: '/dashboard', label: 'Dashboard' },
 ];
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   DndContext,
@@ -24,15 +24,17 @@ interface BoardColumn {
     name: string;
     orderIndex: number;
   };
+  totalCount?: number;
   requests: RequestListItemDTO[];
 }
 
 interface BoardProps {
   initialFlowType: FlowType;
   initialColumns: BoardColumn[];
+  canDelete?: boolean;
 }
 
-export function Board({ initialFlowType, initialColumns }: BoardProps) {
+export function Board({ initialFlowType, initialColumns, canDelete = false }: BoardProps) {
   const router = useRouter();
   const [flowType, setFlowType] = useState<FlowType>(initialFlowType);
   const [columns, setColumns] = useState<BoardColumn[]>(initialColumns);
@@ -40,6 +42,10 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Refs for SSE defer during drag and move debounce
+  const pendingRefetch = useRef(false);
+  const movingIds = useRef(new Set<string>());
 
   // DnD sensors - require 8px movement before drag starts
   const sensors = useSensors(
@@ -80,15 +86,21 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
     }
   }, [flowType, initialFlowType, fetchBoard]);
 
-  // Listen for real-time board updates via SSE
+  // Listen for real-time board updates via SSE (defer during drag)
   useBoardEvents((event) => {
-    if (event.type === 'STAGE_MOVED' || event.type === 'REQUEST_CREATED') {
-      fetchBoard(flowType);
+    if (event.type === 'STAGE_MOVED' || event.type === 'REQUEST_CREATED' || event.type === 'REQUEST_DELETED') {
+      if (activeId) {
+        pendingRefetch.current = true;
+      } else {
+        fetchBoard(flowType);
+      }
     }
   });
 
-  // Handle moving a request to a new stage
+  // Handle moving a request to a new stage (with debounce guard)
   const handleMoveRequest = async (requestId: string, toStageId: string) => {
+    if (movingIds.current.has(requestId)) return;
+    movingIds.current.add(requestId);
     setMoveError(null);
     try {
       const res = await fetch(`/api/requests/${requestId}/move-stage`, {
@@ -144,6 +156,8 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
       console.error('Failed to move request:', error);
       setMoveError('Failed to move project. Please try again.');
       fetchBoard(flowType);
+    } finally {
+      movingIds.current.delete(requestId);
     }
   };
 
@@ -155,6 +169,12 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+
+    // Flush any deferred SSE refetch
+    if (pendingRefetch.current) {
+      pendingRefetch.current = false;
+      fetchBoard(flowType);
+    }
 
     if (!over) return;
 
@@ -174,6 +194,12 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
 
   const handleDragCancel = () => {
     setActiveId(null);
+
+    // Flush any deferred SSE refetch
+    if (pendingRefetch.current) {
+      pendingRefetch.current = false;
+      fetchBoard(flowType);
+    }
   };
 
   // Handle request created
@@ -182,6 +208,67 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
     fetchBoard(flowType);
     router.refresh();
   };
+
+  // Handle deleting a request
+  const handleDeleteRequest = async (requestId: string) => {
+    // Optimistically remove from columns
+    setColumns((prev) =>
+      prev.map((col) => ({
+        ...col,
+        requests: col.requests.filter((r) => r.id !== requestId),
+      }))
+    );
+
+    try {
+      const res = await fetch(`/api/requests/${requestId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        setMoveError('Failed to delete project');
+        fetchBoard(flowType);
+      }
+    } catch {
+      setMoveError('Failed to delete project');
+      fetchBoard(flowType);
+    }
+  };
+
+  // Handle clearing all Done items
+  const handleClearDone = async () => {
+    const doneColumn = columns.find(
+      (c) => c.stage.name.toLowerCase() === 'done'
+    );
+    if (!doneColumn || doneColumn.requests.length === 0) return;
+
+    if (!confirm(`Clear ${doneColumn.requests.length} completed project(s)? This cannot be undone.`)) return;
+
+    // Optimistically clear
+    setColumns((prev) =>
+      prev.map((col) =>
+        col.stage.id === doneColumn.stage.id
+          ? { ...col, requests: [] }
+          : col
+      )
+    );
+
+    try {
+      const res = await fetch('/api/requests/clear-done', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flowType }),
+      });
+      if (!res.ok) {
+        setMoveError('Failed to clear done items');
+        fetchBoard(flowType);
+      }
+    } catch {
+      setMoveError('Failed to clear done items');
+      fetchBoard(flowType);
+    }
+  };
+
+  // Get done column count for the clear button
+  const doneCount = columns.find(
+    (c) => c.stage.name.toLowerCase() === 'done'
+  )?.requests.length ?? 0;
 
   // Get all stages for the move menu
   const allStages = columns.map((c) => ({
@@ -209,9 +296,20 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
             <option value="CONTRACT">Contract</option>
           </Select>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          New Project
-        </Button>
+        <div className="flex items-center gap-2">
+          {canDelete && doneCount > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleClearDone}
+              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+            >
+              Clear Done ({doneCount})
+            </Button>
+          )}
+          <Button onClick={() => setShowCreateDialog(true)}>
+            New Project
+          </Button>
+        </div>
       </div>
 
       {/* Error Banner */}
@@ -241,8 +339,11 @@ export function Board({ initialFlowType, initialColumns }: BoardProps) {
               key={column.stage.id}
               stage={column.stage}
               requests={column.requests}
+              totalCount={column.totalCount}
               onMoveRequest={handleMoveRequest}
+              onDeleteRequest={canDelete ? handleDeleteRequest : undefined}
               availableStages={allStages}
+              canDelete={canDelete}
               isLoading={isLoading}
             />
           ))}

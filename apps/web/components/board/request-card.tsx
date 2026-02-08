@@ -11,7 +11,9 @@ import { formatMrfNumber } from '@request-tracker/shared';
 interface RequestCardProps {
   request: RequestListItemDTO;
   onMove: (requestId: string, toStageId: string) => void;
+  onDelete?: (requestId: string) => void;
   availableStages: Array<{ id: string; name: string }>;
+  canDelete?: boolean;
   isDragOverlay?: boolean;
 }
 
@@ -44,7 +46,9 @@ function getDaysInStage(enteredAt: string | null): number {
 export function RequestCard({
   request,
   onMove,
+  onDelete,
   availableStages,
+  canDelete = false,
   isDragOverlay = false,
 }: RequestCardProps) {
   const [showMoveMenu, setShowMoveMenu] = useState(false);
@@ -72,6 +76,13 @@ export function RequestCard({
       await onMove(request.id, toStageId);
     } finally {
       setIsMoving(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (!onDelete) return;
+    if (confirm(`Delete "${request.description.substring(0, 50)}"? This cannot be undone.`)) {
+      onDelete(request.id);
     }
   };
 
@@ -107,6 +118,7 @@ export function RequestCard({
         onClick={(e) => {
           if (isDragging) e.preventDefault();
         }}
+        title={request.description}
       >
         {request.description.length > 60
           ? `${request.description.substring(0, 60)}...`
@@ -139,8 +151,21 @@ export function RequestCard({
         )}
       </div>
 
-      {/* Move button - visible on hover */}
-      <div className="mt-1.5 flex justify-end">
+      {/* Action buttons - visible on hover */}
+      <div className="mt-1.5 flex justify-end gap-1">
+        {canDelete && onDelete && (
+          <button
+            type="button"
+            className="rounded border border-destructive/30 px-2 py-0.5 text-[11px] text-destructive opacity-0 transition-opacity hover:bg-destructive/10 group-hover:opacity-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            Delete
+          </button>
+        )}
         <div className="relative">
           <button
             type="button"
@@ -161,7 +186,7 @@ export function RequestCard({
                 className="fixed inset-0 z-10"
                 onClick={() => setShowMoveMenu(false)}
               />
-              <div className="absolute bottom-full right-0 z-20 mb-1 w-48 rounded-md border bg-popover p-1 shadow-md">
+              <div className="absolute top-full right-0 z-20 mt-1 w-48 rounded-md border bg-popover p-1 shadow-md">
                 <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
                   Move to...
                 </p>

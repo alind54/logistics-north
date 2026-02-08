@@ -12,16 +12,22 @@ interface BoardColumnProps {
     orderIndex: number;
   };
   requests: RequestListItemDTO[];
+  totalCount?: number;
   onMoveRequest: (requestId: string, toStageId: string) => void;
+  onDeleteRequest?: (requestId: string) => void;
   availableStages: Array<{ id: string; name: string }>;
+  canDelete?: boolean;
   isLoading?: boolean;
 }
 
 export function BoardColumn({
   stage,
   requests,
+  totalCount,
   onMoveRequest,
+  onDeleteRequest,
   availableStages,
+  canDelete = false,
   isLoading,
 }: BoardColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
@@ -42,7 +48,9 @@ export function BoardColumn({
       <div className="flex items-center justify-between border-b px-3 py-2">
         <h3 className="text-sm font-medium">{stage.name}</h3>
         <span className="text-xs text-muted-foreground">
-          {requests.length}
+          {totalCount && totalCount > requests.length
+            ? `${requests.length} of ${totalCount}`
+            : requests.length}
         </span>
       </div>
 
@@ -70,9 +78,11 @@ export function BoardColumn({
               key={request.id}
               request={request}
               onMove={onMoveRequest}
+              onDelete={onDeleteRequest}
               availableStages={availableStages.filter(
                 (s) => s.id !== stage.id
               )}
+              canDelete={canDelete}
             />
           ))
         )}

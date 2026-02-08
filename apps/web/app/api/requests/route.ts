@@ -14,6 +14,7 @@ import {
   type RequestSortField,
   type SortDirection,
 } from '@request-tracker/shared';
+import { eventBus, BOARD_CHANNEL } from '@/server/events';
 
 // GET /api/requests - List requests with pagination and filters
 export async function GET(request: NextRequest) {
@@ -79,6 +80,11 @@ export async function POST(request: NextRequest) {
     if (error) return error;
 
     const newRequest = await createRequest(data as RequestCreateInput, user.id);
+
+    eventBus.publish(BOARD_CHANNEL, {
+      type: 'REQUEST_CREATED',
+      payload: { requestId: newRequest.id },
+    });
 
     return apiSuccess(newRequest, 201);
   } catch (error) {

@@ -470,10 +470,14 @@ export interface BoardColumn {
     name: string;
     orderIndex: number;
   };
+  totalCount?: number;
   requests: RequestListItemDTO[];
 }
 
-export async function listRequestsForBoard(flowType: FlowType): Promise<BoardColumn[]> {
+export async function listRequestsForBoard(
+  flowType: FlowType,
+  limitPerStage = 50
+): Promise<BoardColumn[]> {
   // Get all active stages for this flow type
   const stages = await prisma.stage.findMany({
     where: {
@@ -485,57 +489,132 @@ export async function listRequestsForBoard(flowType: FlowType): Promise<BoardCol
     orderBy: { orderIndex: 'asc' },
   });
 
-  // Get all requests for this flow type
-  const requests = await prisma.request.findMany({
-    where: { flowType },
-    include: {
-      currentStage: { select: { id: true, name: true } },
-      owner: { select: { id: true, email: true } },
-      tags: { include: { tag: true } },
-      stageHistory: {
-        where: { exitedAt: null },
-        select: { enteredAt: true },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  // Fetch requests per stage with limit + total count (avoids loading ALL into memory)
+  const columns = await Promise.all(
+    stages.map(async (stage) => {
+      const [requests, totalCount] = await Promise.all([
+        prisma.request.findMany({
+          where: { flowType, currentStageId: stage.id },
+          include: {
+            currentStage: { select: { id: true, name: true } },
+            owner: { select: { id: true, email: true } },
+            tags: { include: { tag: true } },
+            stageHistory: {
+              where: { exitedAt: null },
+              select: { enteredAt: true },
+            },
+          },
+          orderBy: { updatedAt: 'desc' },
+          take: limitPerStage,
+        }),
+        prisma.request.count({
+          where: { flowType, currentStageId: stage.id },
+        }),
+      ]);
 
-  // Group requests by stage
-  const requestsByStage = new Map<string, RequestListItemDTO[]>();
-  stages.forEach((s) => requestsByStage.set(s.id, []));
-
-  requests.forEach((r) => {
-    const list = requestsByStage.get(r.currentStageId);
-    if (list) {
-      list.push({
-        id: r.id,
-        mrfNumber: r.mrfNumber,
-        description: r.description,
-        priority: r.priority as Priority,
-        dueDate: r.dueDate?.toISOString() ?? null,
-        flowType: r.flowType as FlowType,
-        currentStage: r.currentStage,
-        currentStageEnteredAt: r.stageHistory[0]?.enteredAt.toISOString() ?? null,
-        owner: r.owner,
-        tags: r.tags.map((rt) => ({
-          id: rt.tag.id,
-          name: rt.tag.name,
-          color: rt.tag.color,
+      return {
+        stage: {
+          id: stage.id,
+          name: stage.name,
+          orderIndex: stage.orderIndex,
+        },
+        totalCount,
+        requests: requests.map((r) => ({
+          id: r.id,
+          mrfNumber: r.mrfNumber,
+          description: r.description,
+          priority: r.priority as Priority,
+          dueDate: r.dueDate?.toISOString() ?? null,
+          flowType: r.flowType as FlowType,
+          currentStage: r.currentStage,
+          currentStageEnteredAt: r.stageHistory[0]?.enteredAt.toISOString() ?? null,
+          owner: r.owner,
+          tags: r.tags.map((rt) => ({
+            id: rt.tag.id,
+            name: rt.tag.name,
+            color: rt.tag.color,
+          })),
+          createdAt: r.createdAt.toISOString(),
+          updatedAt: r.updatedAt.toISOString(),
         })),
-        createdAt: r.createdAt.toISOString(),
-        updatedAt: r.updatedAt.toISOString(),
-      });
-    }
+      };
+    })
+  );
+
+  return columns;
+}
+
+// ============================================================================
+// DELETE REQUEST
+// ============================================================================
+
+export async function deleteRequest(requestId: string, actorUserId: string): Promise<void> {
+  const request = await prisma.request.findUnique({
+    where: { id: requestId },
+    select: { id: true, description: true, flowType: true, currentStageId: true },
   });
 
-  return stages.map((s) => ({
-    stage: {
-      id: s.id,
-      name: s.name,
-      orderIndex: s.orderIndex,
+  if (!request) {
+    throw new Error('Request not found');
+  }
+
+  // Cascade deletes handle stageHistory, tags, attachments per schema
+  await prisma.request.delete({
+    where: { id: requestId },
+  });
+
+  await createAuditEvent(AuditEventType.REQUEST_DELETED, actorUserId, null, {
+    requestId,
+    description: request.description,
+    flowType: request.flowType,
+  });
+}
+
+// ============================================================================
+// BULK DELETE DONE REQUESTS
+// ============================================================================
+
+export async function clearDoneRequests(
+  flowType: FlowType,
+  actorUserId: string
+): Promise<number> {
+  // Find the "Done" stage for this flow type
+  const doneStage = await prisma.stage.findFirst({
+    where: {
+      name: 'Done',
+      isActive: true,
+      appliesTo: { in: [flowType as AppliesTo, AppliesTo.BOTH] },
     },
-    requests: requestsByStage.get(s.id) ?? [],
-  }));
+  });
+
+  if (!doneStage) {
+    return 0;
+  }
+
+  const count = await prisma.request.count({
+    where: {
+      flowType,
+      currentStageId: doneStage.id,
+    },
+  });
+
+  if (count === 0) return 0;
+
+  // Delete all done requests (cascades handle related records)
+  await prisma.request.deleteMany({
+    where: {
+      flowType,
+      currentStageId: doneStage.id,
+    },
+  });
+
+  await createAuditEvent(AuditEventType.REQUEST_DELETED, actorUserId, null, {
+    bulkClear: true,
+    flowType,
+    count,
+  });
+
+  return count;
 }
 
 // ============================================================================

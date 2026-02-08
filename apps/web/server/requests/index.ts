@@ -489,57 +489,57 @@ export async function listRequestsForBoard(
     orderBy: { orderIndex: 'asc' },
   });
 
-  // Fetch requests per stage with limit + total count (avoids loading ALL into memory)
-  const columns = await Promise.all(
-    stages.map(async (stage) => {
-      const [requests, totalCount] = await Promise.all([
-        prisma.request.findMany({
-          where: { flowType, currentStageId: stage.id },
-          include: {
-            currentStage: { select: { id: true, name: true } },
-            owner: { select: { id: true, email: true } },
-            tags: { include: { tag: true } },
-            stageHistory: {
-              where: { exitedAt: null },
-              select: { enteredAt: true },
-            },
+  // Fetch requests per stage with limit + total count
+  // Sequential to avoid exhausting Supabase connection pool on serverless
+  const columns: BoardColumn[] = [];
+  for (const stage of stages) {
+    const [requests, totalCount] = await Promise.all([
+      prisma.request.findMany({
+        where: { flowType, currentStageId: stage.id },
+        include: {
+          currentStage: { select: { id: true, name: true } },
+          owner: { select: { id: true, email: true } },
+          tags: { include: { tag: true } },
+          stageHistory: {
+            where: { exitedAt: null },
+            select: { enteredAt: true },
           },
-          orderBy: { updatedAt: 'desc' },
-          take: limitPerStage,
-        }),
-        prisma.request.count({
-          where: { flowType, currentStageId: stage.id },
-        }),
-      ]);
-
-      return {
-        stage: {
-          id: stage.id,
-          name: stage.name,
-          orderIndex: stage.orderIndex,
         },
-        totalCount,
-        requests: requests.map((r) => ({
-          id: r.id,
-          mrfNumber: r.mrfNumber,
-          description: r.description,
-          priority: r.priority as Priority,
-          dueDate: r.dueDate?.toISOString() ?? null,
-          flowType: r.flowType as FlowType,
-          currentStage: r.currentStage,
-          currentStageEnteredAt: r.stageHistory[0]?.enteredAt.toISOString() ?? null,
-          owner: r.owner,
-          tags: r.tags.map((rt) => ({
-            id: rt.tag.id,
-            name: rt.tag.name,
-            color: rt.tag.color,
-          })),
-          createdAt: r.createdAt.toISOString(),
-          updatedAt: r.updatedAt.toISOString(),
+        orderBy: { updatedAt: 'desc' },
+        take: limitPerStage,
+      }),
+      prisma.request.count({
+        where: { flowType, currentStageId: stage.id },
+      }),
+    ]);
+
+    columns.push({
+      stage: {
+        id: stage.id,
+        name: stage.name,
+        orderIndex: stage.orderIndex,
+      },
+      totalCount,
+      requests: requests.map((r) => ({
+        id: r.id,
+        mrfNumber: r.mrfNumber,
+        description: r.description,
+        priority: r.priority as Priority,
+        dueDate: r.dueDate?.toISOString() ?? null,
+        flowType: r.flowType as FlowType,
+        currentStage: r.currentStage,
+        currentStageEnteredAt: r.stageHistory[0]?.enteredAt.toISOString() ?? null,
+        owner: r.owner,
+        tags: r.tags.map((rt) => ({
+          id: rt.tag.id,
+          name: rt.tag.name,
+          color: rt.tag.color,
         })),
-      };
-    })
-  );
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
+      })),
+    });
+  }
 
   return columns;
 }

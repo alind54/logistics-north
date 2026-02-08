@@ -23,19 +23,18 @@ function formatDate(date: Date): string {
 export default async function DashboardPage() {
   const now = new Date();
 
-  // Fetch ALL dashboard data in a single parallel batch
-  const [
-    totalRequests,
-    overdueRequests,
-    overdueCount,
-    requestsByPriority,
-    requestsByStage,
-    stages,
-    stageHistories,
-    activeProjects,
-    openHistories,
-  ] = await Promise.all([
+  // Fetch dashboard data in small batches to avoid connection pool exhaustion
+  const [totalRequests, overdueCount, stages] = await Promise.all([
     prisma.request.count(),
+    prisma.request.count({ where: { dueDate: { lt: now } } }),
+    prisma.stage.findMany({
+      where: { isActive: true },
+      orderBy: { orderIndex: 'asc' },
+      select: { id: true, name: true },
+    }),
+  ]);
+
+  const [overdueRequests, requestsByPriority, requestsByStage] = await Promise.all([
     prisma.request.findMany({
       where: { dueDate: { lt: now } },
       select: {
@@ -50,9 +49,6 @@ export default async function DashboardPage() {
       orderBy: { dueDate: 'asc' },
       take: 20,
     }),
-    prisma.request.count({
-      where: { dueDate: { lt: now } },
-    }),
     prisma.request.groupBy({
       by: ['priority'],
       _count: true,
@@ -61,11 +57,9 @@ export default async function DashboardPage() {
       by: ['currentStageId'],
       _count: true,
     }),
-    prisma.stage.findMany({
-      where: { isActive: true },
-      orderBy: { orderIndex: 'asc' },
-      select: { id: true, name: true },
-    }),
+  ]);
+
+  const [stageHistories, activeProjects, openHistories] = await Promise.all([
     prisma.stageHistory.findMany({
       where: {
         exitedAt: { not: null },

@@ -3,11 +3,15 @@ import { getSession } from '@/server/auth/session';
 import { LoginForm } from './login-form';
 
 export default async function LoginPage() {
-  const session = await getSession();
-
-  // Redirect to board if already logged in
-  if (session?.user) {
-    redirect('/board');
+  try {
+    const session = await getSession();
+    if (session?.user) {
+      redirect('/board');
+    }
+  } catch (error: unknown) {
+    const digest = (error as { digest?: string })?.digest;
+    if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) throw error;
+    // Session error — show login form anyway
   }
 
   return (

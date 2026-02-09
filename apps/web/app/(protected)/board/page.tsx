@@ -1,4 +1,4 @@
-import { listRequestsForBoard } from '@/server/requests';
+import { listRequestsForBoard, type BoardColumn } from '@/server/requests';
 import { Board } from '@/components/board';
 import { FlowType } from '@request-tracker/shared';
 import { getSession } from '@/server/auth/session';
@@ -16,8 +16,13 @@ export default async function BoardPage({ searchParams }: BoardPageProps) {
   const userRole = session?.user?.role ?? '';
   const canDelete = hasPermission(userRole, 'request:delete');
 
-  // Fetch initial board data server-side
-  const columns = await listRequestsForBoard(flowType);
+  // Fetch initial board data server-side (fallback to empty on DB errors)
+  let columns: BoardColumn[];
+  try {
+    columns = await listRequestsForBoard(flowType);
+  } catch {
+    columns = [];
+  }
 
   return (
     <div className="h-[calc(100vh-8rem)]">

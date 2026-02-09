@@ -478,7 +478,7 @@ export async function listRequestsForBoard(
   flowType: FlowType,
   limitPerStage = 50
 ): Promise<BoardColumn[]> {
-  // Get all active stages for this flow type
+  // 1. Get all active stages for this flow type (1 query)
   const stages = await prisma.stage.findMany({
     where: {
       isActive: true,
@@ -489,59 +489,73 @@ export async function listRequestsForBoard(
     orderBy: { orderIndex: 'asc' },
   });
 
-  // Fetch requests per stage with limit + total count
-  // Sequential to avoid exhausting Supabase connection pool on serverless
-  const columns: BoardColumn[] = [];
-  for (const stage of stages) {
-    const [requests, totalCount] = await Promise.all([
-      prisma.request.findMany({
-        where: { flowType, currentStageId: stage.id },
-        include: {
-          currentStage: { select: { id: true, name: true } },
-          owner: { select: { id: true, email: true } },
-          tags: { include: { tag: true } },
-          stageHistory: {
-            where: { exitedAt: null },
-            select: { enteredAt: true },
-          },
-        },
-        orderBy: { updatedAt: 'desc' },
-        take: limitPerStage,
-      }),
-      prisma.request.count({
-        where: { flowType, currentStageId: stage.id },
-      }),
-    ]);
+  if (stages.length === 0) return [];
 
-    columns.push({
-      stage: {
-        id: stage.id,
-        name: stage.name,
-        orderIndex: stage.orderIndex,
+  const stageIds = stages.map((s) => s.id);
+
+  // 2. Batch: counts + all requests in 2 queries (instead of 12 sequential)
+  const [counts, allRequests] = await Promise.all([
+    prisma.request.groupBy({
+      by: ['currentStageId'],
+      where: { flowType, currentStageId: { in: stageIds } },
+      _count: true,
+    }),
+    prisma.request.findMany({
+      where: { flowType, currentStageId: { in: stageIds } },
+      include: {
+        currentStage: { select: { id: true, name: true } },
+        owner: { select: { id: true, email: true } },
+        tags: { include: { tag: true } },
+        stageHistory: {
+          where: { exitedAt: null },
+          select: { enteredAt: true },
+          take: 1,
+        },
       },
-      totalCount,
-      requests: requests.map((r) => ({
-        id: r.id,
-        mrfNumber: r.mrfNumber,
-        description: r.description,
-        priority: r.priority as Priority,
-        dueDate: r.dueDate?.toISOString() ?? null,
-        flowType: r.flowType as FlowType,
-        currentStage: r.currentStage,
-        currentStageEnteredAt: r.stageHistory[0]?.enteredAt.toISOString() ?? null,
-        owner: r.owner,
-        tags: r.tags.map((rt) => ({
-          id: rt.tag.id,
-          name: rt.tag.name,
-          color: rt.tag.color,
-        })),
-        createdAt: r.createdAt.toISOString(),
-        updatedAt: r.updatedAt.toISOString(),
-      })),
-    });
+      orderBy: { updatedAt: 'desc' },
+      take: limitPerStage * stages.length,
+    }),
+  ]);
+
+  const countMap = new Map(counts.map((c) => [c.currentStageId, c._count]));
+
+  // 3. Group requests by stage and enforce per-stage limit in JS
+  const requestsByStage = new Map<string, typeof allRequests>();
+  for (const req of allRequests) {
+    const group = requestsByStage.get(req.currentStageId) ?? [];
+    if (group.length < limitPerStage) {
+      group.push(req);
+      requestsByStage.set(req.currentStageId, group);
+    }
   }
 
-  return columns;
+  // 4. Build response columns
+  return stages.map((stage) => ({
+    stage: {
+      id: stage.id,
+      name: stage.name,
+      orderIndex: stage.orderIndex,
+    },
+    totalCount: countMap.get(stage.id) ?? 0,
+    requests: (requestsByStage.get(stage.id) ?? []).map((r) => ({
+      id: r.id,
+      mrfNumber: r.mrfNumber,
+      description: r.description,
+      priority: r.priority as Priority,
+      dueDate: r.dueDate?.toISOString() ?? null,
+      flowType: r.flowType as FlowType,
+      currentStage: r.currentStage,
+      currentStageEnteredAt: r.stageHistory[0]?.enteredAt.toISOString() ?? null,
+      owner: r.owner,
+      tags: r.tags.map((rt) => ({
+        id: rt.tag.id,
+        name: rt.tag.name,
+        color: rt.tag.color,
+      })),
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
+    })),
+  }));
 }
 
 // ============================================================================

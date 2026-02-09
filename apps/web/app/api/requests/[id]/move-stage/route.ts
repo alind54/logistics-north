@@ -7,7 +7,7 @@ import {
   badRequest,
 } from '@/server/api-utils';
 import { requirePermission } from '@/server/auth/rbac';
-import { getRequestById } from '@/server/requests';
+import { prisma } from '@/server/db';
 import { moveStage } from '@/server/workflow';
 import { moveStageSchema } from '@request-tracker/shared';
 import { createNotification } from '@/server/notifications';
@@ -23,8 +23,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const user = await requirePermission('request:move-stage');
     const { id } = await params;
 
-    // Check request exists
-    const existing = await getRequestById(id);
+    // Lightweight existence check — only select the fields we actually use
+    const existing = await prisma.request.findUnique({
+      where: { id },
+      select: { id: true, description: true, ownerUserId: true },
+    });
     if (!existing) {
       return notFound('Request');
     }

@@ -22,9 +22,10 @@ function formatDate(date: Date): string {
 
 export default async function DashboardPage() {
   const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  // Fetch dashboard data in small batches to avoid connection pool exhaustion
-  const [totalRequests, overdueCount, stages] = await Promise.all([
+  // BATCH 1: Lightweight aggregation queries (6 queries in parallel)
+  const [totalRequests, overdueCount, stages, requestsByPriority, requestsByStage, avgStageTimesRaw] = await Promise.all([
     prisma.request.count(),
     prisma.request.count({ where: { dueDate: { lt: now } } }),
     prisma.stage.findMany({
@@ -32,9 +33,29 @@ export default async function DashboardPage() {
       orderBy: { orderIndex: 'asc' },
       select: { id: true, name: true },
     }),
+    prisma.request.groupBy({
+      by: ['priority'],
+      _count: true,
+    }),
+    prisma.request.groupBy({
+      by: ['currentStageId'],
+      _count: true,
+    }),
+    // DB-side aggregation: avg stage time (replaces fetching all rows + JS loop)
+    prisma.$queryRaw<Array<{ stageId: string; avgMs: number; count: bigint }>>`
+      SELECT
+        "stageId",
+        AVG(EXTRACT(EPOCH FROM ("exitedAt" - "enteredAt")) * 1000)::float8 AS "avgMs",
+        COUNT(*)::bigint AS "count"
+      FROM stage_history
+      WHERE "exitedAt" IS NOT NULL
+        AND "enteredAt" >= ${thirtyDaysAgo}
+      GROUP BY "stageId"
+    `,
   ]);
 
-  const [overdueRequests, requestsByPriority, requestsByStage] = await Promise.all([
+  // BATCH 2: Row-level + aging aggregation (3 queries in parallel)
+  const [overdueRequests, activeProjects, agingBucketsRaw] = await Promise.all([
     prisma.request.findMany({
       where: { dueDate: { lt: now } },
       select: {
@@ -48,28 +69,6 @@ export default async function DashboardPage() {
       },
       orderBy: { dueDate: 'asc' },
       take: 20,
-    }),
-    prisma.request.groupBy({
-      by: ['priority'],
-      _count: true,
-    }),
-    prisma.request.groupBy({
-      by: ['currentStageId'],
-      _count: true,
-    }),
-  ]);
-
-  const [stageHistories, activeProjects, openHistories] = await Promise.all([
-    prisma.stageHistory.findMany({
-      where: {
-        exitedAt: { not: null },
-        enteredAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) },
-      },
-      select: {
-        stageId: true,
-        enteredAt: true,
-        exitedAt: true,
-      },
     }),
     prisma.request.findMany({
       where: {
@@ -93,47 +92,51 @@ export default async function DashboardPage() {
       orderBy: { createdAt: 'desc' },
       take: 50,
     }),
-    prisma.stageHistory.findMany({
-      where: { exitedAt: null },
-      select: {
-        stageId: true,
-        enteredAt: true,
-      },
-    }),
+    // DB-side aging buckets (replaces fetching all open histories + JS bucketing)
+    prisma.$queryRaw<Array<{
+      stageId: string;
+      under24h: bigint;
+      d1to3: bigint;
+      d3to7: bigint;
+      over7d: bigint;
+    }>>`
+      SELECT
+        "stageId",
+        COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (NOW() - "enteredAt")) < 86400)::bigint AS "under24h",
+        COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (NOW() - "enteredAt")) BETWEEN 86400 AND 259200)::bigint AS "d1to3",
+        COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (NOW() - "enteredAt")) BETWEEN 259200 AND 604800)::bigint AS "d3to7",
+        COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (NOW() - "enteredAt")) > 604800)::bigint AS "over7d"
+      FROM stage_history
+      WHERE "exitedAt" IS NULL
+      GROUP BY "stageId"
+    `,
   ]);
 
   const stageMap = new Map(stages.map((s: { id: string; name: string }) => [s.id, s.name]));
 
-  // Calculate average time per stage (last 30 days)
-  const stageTimeMap = new Map<string, number[]>();
-  for (const sh of stageHistories) {
-    if (!sh.exitedAt) continue;
-    const durationMs = sh.exitedAt.getTime() - sh.enteredAt.getTime();
-    const existing = stageTimeMap.get(sh.stageId) ?? [];
-    existing.push(durationMs);
-    stageTimeMap.set(sh.stageId, existing);
-  }
-
+  // Average time per stage — already computed in DB (one row per stage)
+  const avgTimeMap = new Map(avgStageTimesRaw.map((r) => [r.stageId, r]));
   const avgTimeByStage = stages.map((stage: { id: string; name: string }) => {
-    const durations = stageTimeMap.get(stage.id) ?? [];
-    const avg = durations.length > 0
-      ? durations.reduce((a, b) => a + b, 0) / durations.length
-      : 0;
-    return { name: stage.name, avgMs: avg, count: durations.length };
+    const data = avgTimeMap.get(stage.id);
+    return {
+      name: stage.name,
+      avgMs: data?.avgMs ?? 0,
+      count: data ? Number(data.count) : 0,
+    };
   });
 
-  // Calculate aging by stage
-  const agingBuckets = new Map<string, { under24h: number; d1to3: number; d3to7: number; over7d: number }>();
-  for (const oh of openHistories) {
-    const ageMs = now.getTime() - oh.enteredAt.getTime();
-    const bucket = agingBuckets.get(oh.stageId) ?? { under24h: 0, d1to3: 0, d3to7: 0, over7d: 0 };
-    const hours = ageMs / (1000 * 60 * 60);
-    if (hours < 24) bucket.under24h++;
-    else if (hours < 72) bucket.d1to3++;
-    else if (hours < 168) bucket.d3to7++;
-    else bucket.over7d++;
-    agingBuckets.set(oh.stageId, bucket);
-  }
+  // Aging buckets — already computed in DB (one row per stage)
+  const agingBuckets = new Map(
+    agingBucketsRaw.map((r) => [
+      r.stageId,
+      {
+        under24h: Number(r.under24h),
+        d1to3: Number(r.d1to3),
+        d3to7: Number(r.d3to7),
+        over7d: Number(r.over7d),
+      },
+    ])
+  );
 
   const urgentCount = requestsByPriority.find((p: { priority: string; _count: number }) => p.priority === 'URGENT')?._count ?? 0;
 

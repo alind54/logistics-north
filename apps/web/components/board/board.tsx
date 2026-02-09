@@ -89,7 +89,7 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
 
   // Listen for real-time board updates via SSE (defer during drag, suppress self-echo)
   useBoardEvents((event) => {
-    if (event.type === 'STAGE_MOVED' || event.type === 'REQUEST_CREATED' || event.type === 'REQUEST_DELETED') {
+    if (event.type === 'STAGE_MOVED' || event.type === 'REQUEST_CREATED' || event.type === 'REQUEST_DELETED' || event.type === 'POLL_REFRESH') {
       // Suppress self-echo: if this client initiated the move, we already updated optimistically
       const eventRequestId = event.payload?.requestId;
       if (eventRequestId && recentMoveIds.current.has(eventRequestId)) {

@@ -43,9 +43,16 @@ export function useBoardEvents(onEvent: (event: BoardEvent) => void) {
 
     connect();
 
+    // Polling fallback: SSE is in-memory per Vercel container, so events from
+    // other containers are missed. Poll every 30s to catch them.
+    const pollInterval = setInterval(() => {
+      callbackRef.current({ type: 'POLL_REFRESH', payload: {} });
+    }, 30_000);
+
     return () => {
       eventSource?.close();
       clearTimeout(retryTimeout);
+      clearInterval(pollInterval);
     };
   }, []);
 }

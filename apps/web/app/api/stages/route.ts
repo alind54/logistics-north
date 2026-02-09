@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
 
     const stages = await listStages(flowType ?? undefined);
 
-    return apiSuccess({ stages });
+    const response = apiSuccess({ stages });
+    response.headers.set('Cache-Control', 'private, s-maxage=60, stale-while-revalidate=300');
+    return response;
   } catch (error) {
     return handleAuthError(error);
   }

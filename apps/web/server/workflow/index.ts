@@ -152,12 +152,10 @@ export async function moveStage(
   actorUserId: string,
   reason?: string
 ): Promise<MoveStageResult> {
-  // Get the request with current stage (for validation before locking)
+  // Pre-check: get the request with its current stage (for early-exit validation)
   const request = await prisma.request.findUnique({
     where: { id: requestId },
-    include: {
-      currentStage: true,
-    },
+    include: { currentStage: true },
   });
 
   if (!request) {
@@ -166,54 +164,45 @@ export async function moveStage(
 
   const fromStageId = request.currentStageId;
 
-  // If same stage, nothing to do
   if (fromStageId === toStageId) {
     return { success: false, error: 'Request is already in this stage' };
   }
 
-  // Validate the transition is allowed
-  const valid = await isValidTransition(fromStageId, toStageId, request.flowType as FlowType);
-  if (!valid) {
-    return { success: false, error: 'Invalid stage transition' };
-  }
-
-  // Get the target stage
-  const toStage = await prisma.stage.findUnique({
-    where: { id: toStageId },
-  });
-
-  if (!toStage || !toStage.isActive) {
-    return { success: false, error: 'Target stage not found or inactive' };
-  }
-
   const now = new Date();
 
-  // Execute the move in a transaction with row locking to prevent race conditions
+  // Execute validation + move in a single transaction (eliminates TOCTOU race)
   try {
-    await prisma.$transaction(async (tx) => {
-      // Lock the request row to prevent concurrent moves (FOR UPDATE)
+    const toStage = await prisma.$transaction(async (tx) => {
+      // Validate transition inside transaction (no race between check and lock)
+      const transition = await tx.transition.findFirst({
+        where: {
+          fromStageId,
+          toStageId,
+          isActive: true,
+          appliesTo: {
+            in: [request.flowType as AppliesTo, AppliesTo.BOTH],
+          },
+        },
+        include: { toStage: { select: { id: true, name: true, isActive: true } } },
+      });
+
+      if (!transition || !transition.toStage.isActive) {
+        throw new Error('Invalid stage transition');
+      }
+
+      // Lock the request row to prevent concurrent moves
       const locked = await tx.$queryRaw<Array<{ currentStageId: string }>>`
         SELECT "currentStageId" FROM requests WHERE id = ${requestId} FOR UPDATE
       `;
 
-      if (!locked[0]) {
-        throw new Error('Request not found during lock');
-      }
-
-      // Verify stage hasn't been changed by a concurrent move
-      if (locked[0].currentStageId !== fromStageId) {
+      if (!locked[0] || locked[0].currentStageId !== fromStageId) {
         throw new Error('Request was moved by another user');
       }
 
       // Close the current stage history entry
       await tx.stageHistory.updateMany({
-        where: {
-          requestId,
-          exitedAt: null,
-        },
-        data: {
-          exitedAt: now,
-        },
+        where: { requestId, exitedAt: null },
+        data: { exitedAt: now },
       });
 
       // Create new stage history entry
@@ -230,37 +219,40 @@ export async function moveStage(
       // Update the request's current stage
       await tx.request.update({
         where: { id: requestId },
-        data: {
-          currentStageId: toStageId,
-        },
+        data: { currentStageId: toStageId },
       });
+
+      return transition.toStage;
     });
+
+    // Fire-and-forget audit event — don't block the API response
+    createAuditEvent(AuditEventType.STAGE_MOVED, actorUserId, requestId, {
+      fromStageId,
+      fromStageName: request.currentStage.name,
+      toStageId,
+      toStageName: toStage.name,
+      reason: reason ?? null,
+    }).catch(() => {});
+
+    return {
+      success: true,
+      request: {
+        id: requestId,
+        previousStageId: fromStageId,
+        previousStageName: request.currentStage.name,
+        newStageId: toStageId,
+        newStageName: toStage.name,
+      },
+    };
   } catch (error) {
-    if (error instanceof Error && error.message === 'Request was moved by another user') {
-      return { success: false, error: error.message };
+    if (error instanceof Error) {
+      if (error.message === 'Request was moved by another user' ||
+          error.message === 'Invalid stage transition') {
+        return { success: false, error: error.message };
+      }
     }
     throw error;
   }
-
-  // Create audit event
-  await createAuditEvent(AuditEventType.STAGE_MOVED, actorUserId, requestId, {
-    fromStageId,
-    fromStageName: request.currentStage.name,
-    toStageId,
-    toStageName: toStage.name,
-    reason: reason ?? null,
-  });
-
-  return {
-    success: true,
-    request: {
-      id: requestId,
-      previousStageId: fromStageId,
-      previousStageName: request.currentStage.name,
-      newStageId: toStageId,
-      newStageName: toStage.name,
-    },
-  };
 }
 
 // ============================================================================

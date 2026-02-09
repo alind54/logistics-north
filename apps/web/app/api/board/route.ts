@@ -22,7 +22,9 @@ export async function GET(request: NextRequest) {
 
     const columns = await listRequestsForBoard(flowType);
 
-    return apiSuccess({ columns, flowType });
+    const response = apiSuccess({ columns, flowType });
+    response.headers.set('Cache-Control', 'private, no-store');
+    return response;
   } catch (error) {
     return handleAuthError(error);
   }

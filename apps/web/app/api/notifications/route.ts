@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
     const unreadOnly = url.searchParams.get('unreadOnly') === 'true';
 
     const result = await getNotificationsForUser(user.id, { unreadOnly });
-    return apiSuccess(result);
+    const response = apiSuccess(result);
+    response.headers.set('Cache-Control', 'private, max-age=5, stale-while-revalidate=10');
+    return response;
   } catch (error) {
     return handleAuthError(error);
   }

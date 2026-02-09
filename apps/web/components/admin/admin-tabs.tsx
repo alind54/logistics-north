@@ -1,12 +1,34 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { cn } from '@request-tracker/ui';
-import { StagesManager } from './stages-manager';
-import { TransitionsManager } from './transitions-manager';
-import { TagsManager } from './tags-manager';
-import { UsersManager } from './users-manager';
 import type { StageDTO, TransitionDTO, TagDTO, UserDTO } from '@request-tracker/shared';
+
+const TabSkeleton = () => (
+  <div className="space-y-3 p-4">
+    {[1, 2, 3].map((i) => (
+      <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
+    ))}
+  </div>
+);
+
+const StagesManager = dynamic(
+  () => import('./stages-manager').then((m) => ({ default: m.StagesManager })),
+  { loading: TabSkeleton }
+);
+const TransitionsManager = dynamic(
+  () => import('./transitions-manager').then((m) => ({ default: m.TransitionsManager })),
+  { loading: TabSkeleton }
+);
+const TagsManager = dynamic(
+  () => import('./tags-manager').then((m) => ({ default: m.TagsManager })),
+  { loading: TabSkeleton }
+);
+const UsersManager = dynamic(
+  () => import('./users-manager').then((m) => ({ default: m.UsersManager })),
+  { loading: TabSkeleton }
+);
 
 interface TransitionWithStages extends TransitionDTO {
   fromStageName: string;

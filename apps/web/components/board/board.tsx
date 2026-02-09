@@ -11,11 +11,15 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
+import dynamic from 'next/dynamic';
 import { Button, Select } from '@request-tracker/ui';
 import { BoardColumn } from './board-column';
 import { RequestCard } from './request-card';
-import { CreateRequestDialog } from './create-request-dialog';
 import type { FlowType, RequestListItemDTO } from '@request-tracker/shared';
+
+const CreateRequestDialog = dynamic(() =>
+  import('./create-request-dialog').then((m) => ({ default: m.CreateRequestDialog }))
+);
 import { useBoardEvents } from '@/hooks/use-board-events';
 
 interface BoardColumn {

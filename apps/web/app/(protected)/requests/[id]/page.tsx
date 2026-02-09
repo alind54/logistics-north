@@ -20,26 +20,19 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
   const canDeleteAttachment = hasPermission(userRole, 'attachment:delete');
   const canViewAudit = hasPermission(userRole, 'audit:read');
 
-  // Fetch request details
+  // Fetch request first (others depend on it)
   const request = await getRequestById(id);
 
   if (!request) {
     notFound();
   }
 
-  // Fetch all stages for the flow type (for progress bar)
-  const allStages = await listStages(request.flowType as FlowType);
-
-  // Fetch available transitions (includes toStage data to avoid N+1)
-  const transitions = await getAvailableTransitions(
-    request.currentStage.id,
-    request.flowType as FlowType
-  );
-
-  // Fetch audit events if user has permission
-  const auditData = canViewAudit
-    ? await getAuditEventsForRequest(id, { limit: 20 })
-    : null;
+  // Fetch stages, transitions, and audit events in parallel
+  const [allStages, transitions, auditData] = await Promise.all([
+    listStages(request.flowType as FlowType),
+    getAvailableTransitions(request.currentStage.id, request.flowType as FlowType),
+    canViewAudit ? getAuditEventsForRequest(id, { limit: 20 }) : null,
+  ]);
 
   return (
     <RequestDetail

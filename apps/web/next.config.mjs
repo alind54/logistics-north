@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@request-tracker/shared', '@request-tracker/ui'],
+  experimental: {
+    optimizePackageImports: ['@dnd-kit/core', '@dnd-kit/utilities', 'clsx', 'zod'],
+  },
   async headers() {
     return [
       {

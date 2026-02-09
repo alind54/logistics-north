@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   DndContext,
@@ -43,9 +43,10 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
   const [moveError, setMoveError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Refs for SSE defer during drag and move debounce
+  // Refs for SSE defer during drag, move debounce, and self-echo suppression
   const pendingRefetch = useRef(false);
   const movingIds = useRef(new Set<string>());
+  const recentMoveIds = useRef(new Set<string>());
 
   // DnD sensors - require 8px movement before drag starts
   const sensors = useSensors(
@@ -64,9 +65,9 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
     }
   }, [moveError]);
 
-  // Fetch board data when flow type changes
-  const fetchBoard = useCallback(async (ft: FlowType) => {
-    setIsLoading(true);
+  // Fetch board data (silent=true skips loading skeleton for background SSE refreshes)
+  const fetchBoard = useCallback(async (ft: FlowType, { silent = false } = {}) => {
+    if (!silent) setIsLoading(true);
     try {
       const res = await fetch(`/api/board?flowType=${ft}`);
       if (res.ok) {
@@ -76,7 +77,7 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
     } catch (error) {
       console.error('Failed to fetch board:', error);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, []);
 
@@ -86,22 +87,62 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
     }
   }, [flowType, initialFlowType, fetchBoard]);
 
-  // Listen for real-time board updates via SSE (defer during drag)
+  // Listen for real-time board updates via SSE (defer during drag, suppress self-echo)
   useBoardEvents((event) => {
     if (event.type === 'STAGE_MOVED' || event.type === 'REQUEST_CREATED' || event.type === 'REQUEST_DELETED') {
+      // Suppress self-echo: if this client initiated the move, we already updated optimistically
+      const eventRequestId = event.payload?.requestId;
+      if (eventRequestId && recentMoveIds.current.has(eventRequestId)) {
+        recentMoveIds.current.delete(eventRequestId);
+        return;
+      }
       if (activeId) {
         pendingRefetch.current = true;
       } else {
-        fetchBoard(flowType);
+        fetchBoard(flowType, { silent: true });
       }
     }
   });
 
-  // Handle moving a request to a new stage (with debounce guard)
+  // Handle moving a request to a new stage (true optimistic — update UI before API)
   const handleMoveRequest = async (requestId: string, toStageId: string) => {
     if (movingIds.current.has(requestId)) return;
     movingIds.current.add(requestId);
+    recentMoveIds.current.add(requestId);
     setMoveError(null);
+
+    // Immediately update UI (true optimistic)
+    setColumns((prevColumns) => {
+      const newColumns = prevColumns.map((col) => ({
+        ...col,
+        requests: [...col.requests],
+      }));
+
+      let movedRequest: RequestListItemDTO | null = null;
+      for (const col of newColumns) {
+        const idx = col.requests.findIndex((r) => r.id === requestId);
+        if (idx !== -1) {
+          movedRequest = col.requests[idx] ?? null;
+          col.requests.splice(idx, 1);
+          break;
+        }
+      }
+
+      if (movedRequest) {
+        const targetCol = newColumns.find((c) => c.stage.id === toStageId);
+        if (targetCol) {
+          movedRequest.currentStage = {
+            id: targetCol.stage.id,
+            name: targetCol.stage.name,
+          };
+          targetCol.requests.unshift(movedRequest);
+        }
+      }
+
+      return newColumns;
+    });
+
+    // Then confirm with API (revert on failure)
     try {
       const res = await fetch(`/api/requests/${requestId}/move-stage`, {
         method: 'POST',
@@ -109,41 +150,7 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
         body: JSON.stringify({ toStageId }),
       });
 
-      if (res.ok) {
-        // Optimistically update the UI
-        setColumns((prevColumns) => {
-          const newColumns = prevColumns.map((col) => ({
-            ...col,
-            requests: [...col.requests],
-          }));
-
-          // Find and remove the request from its current column
-          let movedRequest: RequestListItemDTO | null = null;
-          for (const col of newColumns) {
-            const idx = col.requests.findIndex((r) => r.id === requestId);
-            if (idx !== -1) {
-              movedRequest = col.requests[idx] ?? null;
-              col.requests.splice(idx, 1);
-              break;
-            }
-          }
-
-          // Add to the new column
-          if (movedRequest) {
-            const targetCol = newColumns.find((c) => c.stage.id === toStageId);
-            if (targetCol) {
-              movedRequest.currentStage = {
-                id: targetCol.stage.id,
-                name: targetCol.stage.name,
-              };
-              targetCol.requests.unshift(movedRequest);
-            }
-          }
-
-          return newColumns;
-        });
-      } else {
-        // Parse error and show to user
+      if (!res.ok) {
         try {
           const body = await res.json();
           setMoveError(body.message || 'Failed to move project');
@@ -158,6 +165,8 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
       fetchBoard(flowType);
     } finally {
       movingIds.current.delete(requestId);
+      // Clean up self-echo suppression after 5s (in case SSE event never arrives)
+      setTimeout(() => recentMoveIds.current.delete(requestId), 5000);
     }
   };
 
@@ -170,10 +179,10 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
     const { active, over } = event;
     setActiveId(null);
 
-    // Flush any deferred SSE refetch
+    // Flush any deferred SSE refetch (silent — no loading skeleton)
     if (pendingRefetch.current) {
       pendingRefetch.current = false;
-      fetchBoard(flowType);
+      fetchBoard(flowType, { silent: true });
     }
 
     if (!over) return;
@@ -195,10 +204,10 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
   const handleDragCancel = () => {
     setActiveId(null);
 
-    // Flush any deferred SSE refetch
+    // Flush any deferred SSE refetch (silent — no loading skeleton)
     if (pendingRefetch.current) {
       pendingRefetch.current = false;
-      fetchBoard(flowType);
+      fetchBoard(flowType, { silent: true });
     }
   };
 
@@ -270,11 +279,11 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
     (c) => c.stage.name.toLowerCase() === 'done'
   )?.requests.length ?? 0;
 
-  // Get all stages for the move menu
-  const allStages = columns.map((c) => ({
-    id: c.stage.id,
-    name: c.stage.name,
-  }));
+  // Get all stages for the move menu (memoized to prevent child re-renders)
+  const allStages = useMemo(
+    () => columns.map((c) => ({ id: c.stage.id, name: c.stage.name })),
+    [columns]
+  );
 
   // Find the active request for DragOverlay
   const activeRequest = activeId

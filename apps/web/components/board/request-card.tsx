@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import Link from 'next/link';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -18,10 +18,10 @@ interface RequestCardProps {
 }
 
 const priorityColors: Record<Priority, string> = {
-  LOW: 'bg-slate-400',
+  LOW: 'bg-slate-300',
   NORMAL: 'bg-blue-400',
-  HIGH: 'bg-orange-400',
-  URGENT: 'bg-red-400',
+  HIGH: 'bg-amber-400',
+  URGENT: 'bg-red-500',
 };
 
 function formatDate(dateString: string | null): string {
@@ -43,7 +43,7 @@ function getDaysInStage(enteredAt: string | null): number {
   return Math.ceil((Date.now() - new Date(enteredAt).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export function RequestCard({
+export const RequestCard = memo(function RequestCard({
   request,
   onMove,
   onDelete,
@@ -137,7 +137,7 @@ export function RequestCard({
             <span className={cn(
               'font-medium',
               daysInStage > 7 ? 'text-destructive' :
-              daysInStage > 3 ? 'text-yellow-400' :
+              daysInStage > 3 ? 'text-amber-300' :
               'text-muted-foreground'
             )}>
               {daysInStage}d
@@ -156,7 +156,7 @@ export function RequestCard({
         {canDelete && onDelete && (
           <button
             type="button"
-            className="rounded border border-destructive/30 px-2 py-0.5 text-[11px] text-destructive opacity-0 transition-opacity hover:bg-destructive/10 group-hover:opacity-100"
+            className="rounded border border-destructive/30 px-2.5 py-1 text-xs text-destructive transition-opacity hover:bg-destructive/10 sm:opacity-0 sm:group-hover:opacity-100"
             onClick={(e) => {
               e.stopPropagation();
               handleDelete();
@@ -169,7 +169,7 @@ export function RequestCard({
         <div className="relative">
           <button
             type="button"
-            className="rounded border px-2 py-0.5 text-[11px] text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+            className="rounded border px-2.5 py-1 text-xs text-muted-foreground transition-opacity hover:bg-accent hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100"
             onClick={(e) => {
               e.stopPropagation();
               setShowMoveMenu(!showMoveMenu);
@@ -208,4 +208,4 @@ export function RequestCard({
       </div>
     </div>
   );
-}
+});

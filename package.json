@@ -10,6 +10,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "test:e2e": "pnpm --filter @request-tracker/web test:e2e",
+    "test:prod": "pnpm --filter @request-tracker/web test:prod",
     "db:migrate": "pnpm --filter @request-tracker/web db:migrate",
     "db:generate": "pnpm --filter @request-tracker/web db:generate",
     "db:seed": "pnpm --filter @request-tracker/web db:seed",

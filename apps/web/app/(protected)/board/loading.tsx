@@ -12,7 +12,7 @@ export default function BoardLoading() {
         {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className="flex min-w-[280px] max-w-[320px] flex-1 flex-shrink-0 flex-col rounded-lg border bg-muted/30"
+            className="flex min-w-[180px] max-w-[240px] flex-1 flex-shrink-0 flex-col rounded-lg border bg-muted/30"
           >
             <div className="flex items-center justify-between border-b px-3 py-2">
               <div className="h-4 w-24 animate-pulse rounded bg-muted" />

@@ -45,7 +45,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Parse multipart form data
-    const formData = await request.formData();
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return badRequest('Invalid or empty form data. Send a "file" field in multipart form data.');
+    }
     const file = formData.get('file');
     const stageId = formData.get('stageId') as string | null;
 

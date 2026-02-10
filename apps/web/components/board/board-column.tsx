@@ -7,17 +7,17 @@ import type { RequestListItemDTO } from '@request-tracker/shared';
 
 // Stage → color mapping for visual identity
 const STAGE_COLORS: Record<string, { border: string; bg: string; text: string; pill: string }> = {
-  'mrf':                 { border: 'border-t-violet-500',  bg: 'bg-violet-500/10',  text: 'text-violet-400',  pill: 'bg-violet-500/20 text-violet-300' },
-  'supplier assignment': { border: 'border-t-blue-500',    bg: 'bg-blue-500/10',    text: 'text-blue-400',    pill: 'bg-blue-500/20 text-blue-300' },
-  'requisition':         { border: 'border-t-cyan-500',    bg: 'bg-cyan-500/10',    text: 'text-cyan-400',    pill: 'bg-cyan-500/20 text-cyan-300' },
-  'order':               { border: 'border-t-emerald-500', bg: 'bg-emerald-500/10', text: 'text-emerald-400', pill: 'bg-emerald-500/20 text-emerald-300' },
-  'inventory':           { border: 'border-t-amber-500',   bg: 'bg-amber-500/10',   text: 'text-amber-400',   pill: 'bg-amber-500/20 text-amber-300' },
-  'contract':            { border: 'border-t-purple-500',  bg: 'bg-purple-500/10',  text: 'text-purple-400',  pill: 'bg-purple-500/20 text-purple-300' },
-  'certificate':         { border: 'border-t-orange-500',  bg: 'bg-orange-500/10',  text: 'text-orange-400',  pill: 'bg-orange-500/20 text-orange-300' },
-  'done':                { border: 'border-t-green-500',   bg: 'bg-green-500/10',   text: 'text-green-400',   pill: 'bg-green-500/20 text-green-300' },
+  'mrf':                 { border: 'border-t-violet-500',  bg: 'bg-violet-50',  text: 'text-violet-700',  pill: 'bg-violet-100 text-violet-700' },
+  'supplier assignment': { border: 'border-t-blue-500',    bg: 'bg-blue-50',    text: 'text-blue-700',    pill: 'bg-blue-100 text-blue-700' },
+  'requisition':         { border: 'border-t-cyan-500',    bg: 'bg-cyan-50',    text: 'text-cyan-700',    pill: 'bg-cyan-100 text-cyan-700' },
+  'order':               { border: 'border-t-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', pill: 'bg-emerald-100 text-emerald-700' },
+  'inventory':           { border: 'border-t-amber-500',   bg: 'bg-amber-50',   text: 'text-amber-700',   pill: 'bg-amber-100 text-amber-700' },
+  'contract':            { border: 'border-t-purple-500',  bg: 'bg-purple-50',  text: 'text-purple-700',  pill: 'bg-purple-100 text-purple-700' },
+  'certificate':         { border: 'border-t-orange-500',  bg: 'bg-orange-50',  text: 'text-orange-700',  pill: 'bg-orange-100 text-orange-700' },
+  'done':                { border: 'border-t-green-500',   bg: 'bg-green-50',   text: 'text-green-700',   pill: 'bg-green-100 text-green-700' },
 };
 
-const DEFAULT_COLORS = { border: 'border-t-slate-500', bg: 'bg-slate-500/10', text: 'text-slate-400', pill: 'bg-slate-500/20 text-slate-300' };
+const DEFAULT_COLORS = { border: 'border-t-slate-500', bg: 'bg-slate-50', text: 'text-slate-700', pill: 'bg-slate-100 text-slate-700' };
 
 function getStageColors(stageName: string) {
   return STAGE_COLORS[stageName.toLowerCase()] ?? DEFAULT_COLORS;

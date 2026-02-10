@@ -103,10 +103,10 @@ export const RequestCard = memo(function RequestCard({
       style={style}
       {...(!isDragOverlay ? { ...attributes, ...listeners } : {})}
       className={cn(
-        'group relative rounded-md border-l-[3px] border bg-card px-2.5 py-2 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing',
+        'group relative rounded-md border-l-[3px] border bg-card px-2.5 py-2 transition-colors hover:bg-muted/50 cursor-grab active:cursor-grabbing',
         priorityBorder[request.priority],
         isDragging && 'opacity-30',
-        isDragOverlay && 'shadow-lg ring-2 ring-primary/30',
+        isDragOverlay && 'ring-2 ring-primary/30 shadow-md',
         isMoving && 'opacity-50'
       )}
     >
@@ -146,7 +146,7 @@ export const RequestCard = memo(function RequestCard({
             <span className={cn(
               'font-medium',
               daysInStage > 7 ? 'text-destructive' :
-              daysInStage > 3 ? 'text-amber-300' :
+              daysInStage > 3 ? 'text-amber-600' :
               'text-muted-foreground'
             )}>
               {daysInStage}d

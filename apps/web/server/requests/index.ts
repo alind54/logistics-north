@@ -291,6 +291,7 @@ export async function getRequestById(requestId: string): Promise<RequestDetailDT
       stageHistory: {
         include: { stage: { select: { name: true } } },
         orderBy: { enteredAt: 'asc' },
+        take: 50,
       },
     },
   });

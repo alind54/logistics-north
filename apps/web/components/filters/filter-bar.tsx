@@ -121,7 +121,7 @@ export function FilterBar({ stages, showFlowType = true }: FilterBarProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
+      <div className="flex flex-wrap items-end gap-3 rounded-lg bg-muted/50 p-4">
         {/* Search */}
         <div className="w-full space-y-1 sm:w-auto sm:flex-1">
           <label className="text-xs font-medium text-muted-foreground">Search</label>

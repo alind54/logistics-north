@@ -173,21 +173,20 @@ export async function moveStage(
   // Execute validation + move in a single transaction (eliminates TOCTOU race)
   try {
     const toStage = await prisma.$transaction(async (tx) => {
-      // Validate transition inside transaction (no race between check and lock)
-      const transition = await tx.transition.findFirst({
+      // Validate target stage is active and applies to this flow type
+      const targetStage = await tx.stage.findFirst({
         where: {
-          fromStageId,
-          toStageId,
+          id: toStageId,
           isActive: true,
           appliesTo: {
             in: [request.flowType as AppliesTo, AppliesTo.BOTH],
           },
         },
-        include: { toStage: { select: { id: true, name: true, isActive: true } } },
+        select: { id: true, name: true, isActive: true },
       });
 
-      if (!transition || !transition.toStage.isActive) {
-        throw new Error('Invalid stage transition');
+      if (!targetStage) {
+        throw new Error('Invalid target stage');
       }
 
       // Lock the request row to prevent concurrent moves
@@ -222,7 +221,7 @@ export async function moveStage(
         data: { currentStageId: toStageId },
       });
 
-      return transition.toStage;
+      return targetStage;
     });
 
     // Fire-and-forget audit event — don't block the API response
@@ -247,7 +246,7 @@ export async function moveStage(
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Request was moved by another user' ||
-          error.message === 'Invalid stage transition') {
+          error.message === 'Invalid target stage') {
         return { success: false, error: error.message };
       }
     }

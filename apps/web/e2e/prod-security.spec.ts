@@ -518,11 +518,7 @@ test.describe('S8: File Upload Abuse', () => {
     const res = await request.post(`${BASE}/api/requests/${testRequestId}/attachments`, {
       headers: { Cookie: cookie },
     });
-    // Server returns 400 ("No file provided") or 500 (unhandled edge case — potential bug)
-    expect([400, 500]).toContain(res.status());
-    if (res.status() === 500) {
-      console.warn('⚠ BUG FINDING: Empty form data returns 500 instead of 400 — missing validation');
-    }
+    expect(res.status()).toBe(400);
   });
 });
 

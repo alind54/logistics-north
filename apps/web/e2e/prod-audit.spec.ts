@@ -679,9 +679,9 @@ test.describe.serial('Admin Panel', () => {
     await expect(page.getByRole('heading', { name: 'Workflow Stages' })).toBeVisible();
 
     const downButtons = page.locator('button[title="Move down"]');
-    if (await downButtons.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await downButtons.nth(1).isVisible({ timeout: 3000 }).catch(() => false)) {
       await perfApi(page, 'reorder-stage', 'admin', /\/api\/admin\/stages\/reorder/, async () => {
-        await downButtons.first().click();
+        await downButtons.nth(1).click();
       });
       await expect(page.getByRole('heading', { name: 'Workflow Stages' })).toBeVisible();
     }

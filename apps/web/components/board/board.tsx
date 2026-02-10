@@ -329,11 +329,11 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
 
       {/* Load Error Banner */}
       {loadError && (
-        <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
           <span>Failed to load board data. Showing last known state.</span>
           <button
             type="button"
-            className="ml-4 rounded border border-amber-500/30 px-2 py-0.5 text-xs hover:bg-amber-500/20"
+            className="ml-4 rounded border border-amber-300 px-2 py-0.5 text-xs hover:bg-amber-100"
             onClick={() => fetchBoard(flowType)}
           >
             Retry

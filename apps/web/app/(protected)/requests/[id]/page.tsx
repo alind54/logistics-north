@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getRequestById } from '@/server/requests';
-import { getAvailableTransitions, listStages } from '@/server/workflow';
+import { listStages } from '@/server/workflow';
 import { getAuditEventsForRequest } from '@/server/audit';
 import { getSession } from '@/server/auth/session';
 import { hasPermission } from '@/server/auth/rbac';
@@ -27,10 +27,9 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
     notFound();
   }
 
-  // Fetch stages, transitions, and audit events in parallel
-  const [allStages, transitions, auditData] = await Promise.all([
+  // Fetch stages and audit events in parallel
+  const [allStages, auditData] = await Promise.all([
     listStages(request.flowType as FlowType),
-    getAvailableTransitions(request.currentStage.id, request.flowType as FlowType),
     canViewAudit ? getAuditEventsForRequest(id, { limit: 20 }) : null,
   ]);
 
@@ -38,9 +37,6 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
     <RequestDetail
       request={request}
       allStages={allStages}
-      availableTransitions={transitions.filter(
-        (t): t is typeof t & { toStage: NonNullable<typeof t.toStage> } => t.toStage !== null
-      )}
       auditEvents={
         auditData?.events.map((e) => ({
           id: e.id,

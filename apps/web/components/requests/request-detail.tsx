@@ -15,7 +15,6 @@ import {
 import type {
   RequestDetailDTO,
   Priority,
-  TransitionDTO,
   StageDTO,
 } from '@request-tracker/shared';
 import { formatMrfNumber } from '@request-tracker/shared';
@@ -31,14 +30,9 @@ interface AuditEvent {
   actor: { id: string; email: string };
 }
 
-interface TransitionWithStage extends TransitionDTO {
-  toStage: { id: string; name: string; orderIndex: number };
-}
-
 interface RequestDetailProps {
   request: RequestDetailDTO;
   allStages: StageDTO[];
-  availableTransitions: TransitionWithStage[];
   auditEvents: AuditEvent[];
   canEdit: boolean;
   canUpload: boolean;
@@ -94,7 +88,6 @@ function getCurrentDuration(enteredAt: string): string {
 export function RequestDetail({
   request,
   allStages,
-  availableTransitions,
   auditEvents,
   canEdit,
   canUpload,
@@ -244,7 +237,7 @@ export function RequestDetail({
 
           {/* Actions */}
           <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-            {canEdit && availableTransitions.length > 0 && (
+            {canEdit && allStages.length > 1 && (
               <div className="flex items-center gap-2">
                 <Select
                   value={selectedStageId}
@@ -252,11 +245,13 @@ export function RequestDetail({
                   className="w-36 text-sm"
                 >
                   <option value="">Move to...</option>
-                  {availableTransitions.map((t) => (
-                    <option key={t.toStage.id} value={t.toStage.id}>
-                      {t.toStage.name}
-                    </option>
-                  ))}
+                  {allStages
+                    .filter((s) => s.id !== request.currentStage.id)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
                 </Select>
                 {selectedStageId && (
                   <>
@@ -307,7 +302,7 @@ export function RequestDetail({
               <span className={cn(
                 'text-[10px] leading-tight text-center',
                 isCurrent ? 'font-semibold text-primary' :
-                isCompleted ? 'text-green-400' : 'text-muted-foreground'
+                isCompleted ? 'text-green-600' : 'text-muted-foreground'
               )}>
                 {stage.name}
               </span>

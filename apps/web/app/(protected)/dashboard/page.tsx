@@ -334,10 +334,10 @@ async function DashboardDetails({
                       </td>
                       <td className="py-3">
                         <span className={`rounded px-2 py-1 text-xs ${
-                          project.priority === 'URGENT' ? 'bg-red-500/15 text-red-400' :
-                          project.priority === 'HIGH' ? 'bg-orange-500/15 text-orange-400' :
-                          project.priority === 'NORMAL' ? 'bg-blue-500/15 text-blue-400' :
-                          'bg-slate-500/15 text-slate-300'
+                          project.priority === 'URGENT' ? 'bg-red-50 text-red-700' :
+                          project.priority === 'HIGH' ? 'bg-orange-50 text-orange-700' :
+                          project.priority === 'NORMAL' ? 'bg-blue-50 text-blue-700' :
+                          'bg-slate-100 text-slate-700'
                         }`}>
                           {project.priority}
                         </span>
@@ -348,7 +348,7 @@ async function DashboardDetails({
                       <td className="py-3 text-right">
                         <span className={`text-sm font-medium ${
                           daysInStage > 7 ? 'text-destructive' :
-                          daysInStage > 3 ? 'text-yellow-400' :
+                          daysInStage > 3 ? 'text-amber-600' :
                           'text-muted-foreground'
                         }`}>
                           {daysInStage}d
@@ -399,22 +399,22 @@ async function DashboardDetails({
                   <tr key={stage.id} className="border-b last:border-0">
                     <td className="py-3 font-medium">{stage.name}</td>
                     <td className="py-3 text-center">
-                      <span className="rounded bg-green-500/15 px-2 py-1 text-xs text-green-400">
+                      <span className="rounded bg-green-50 px-2 py-1 text-xs text-green-700">
                         {bucket?.under24h ?? 0}
                       </span>
                     </td>
                     <td className="py-3 text-center">
-                      <span className="rounded bg-yellow-500/15 px-2 py-1 text-xs text-yellow-400">
+                      <span className="rounded bg-yellow-50 px-2 py-1 text-xs text-yellow-700">
                         {bucket?.d1to3 ?? 0}
                       </span>
                     </td>
                     <td className="py-3 text-center">
-                      <span className="rounded bg-orange-500/15 px-2 py-1 text-xs text-orange-400">
+                      <span className="rounded bg-orange-50 px-2 py-1 text-xs text-orange-700">
                         {bucket?.d3to7 ?? 0}
                       </span>
                     </td>
                     <td className="py-3 text-center">
-                      <span className="rounded bg-red-500/15 px-2 py-1 text-xs text-red-400">
+                      <span className="rounded bg-red-50 px-2 py-1 text-xs text-red-700">
                         {bucket?.over7d ?? 0}
                       </span>
                     </td>
@@ -474,10 +474,10 @@ async function DashboardDetails({
                       <span
                         className={`rounded px-2 py-1 text-xs ${
                           req.priority === 'URGENT'
-                            ? 'bg-red-500/15 text-red-400'
+                            ? 'bg-red-50 text-red-700'
                             : req.priority === 'HIGH'
-                              ? 'bg-orange-500/15 text-orange-400'
-                              : 'bg-blue-500/15 text-blue-400'
+                              ? 'bg-orange-50 text-orange-700'
+                              : 'bg-blue-50 text-blue-700'
                         }`}
                       >
                         {req.priority}

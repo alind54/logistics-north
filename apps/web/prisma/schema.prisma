@@ -173,6 +173,7 @@ model StageHistory {
   @@index([exitedAt])
   @@index([requestId, exitedAt])
   @@index([stageId, exitedAt])
+  @@index([enteredAt])
   @@map("stage_history")
 }
 

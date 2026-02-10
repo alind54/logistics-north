@@ -5,7 +5,6 @@ import { getAuditEventsForRequest } from '@/server/audit';
 import { getSession } from '@/server/auth/session';
 import { hasPermission } from '@/server/auth/rbac';
 import { RequestDetail } from '@/components/requests/request-detail';
-import { FlowType } from '@request-tracker/shared';
 
 interface RequestDetailPageProps {
   params: Promise<{ id: string }>;
@@ -20,18 +19,16 @@ export default async function RequestDetailPage({ params }: RequestDetailPagePro
   const canDeleteAttachment = hasPermission(userRole, 'attachment:delete');
   const canViewAudit = hasPermission(userRole, 'audit:read');
 
-  // Fetch request first (others depend on it)
-  const request = await getRequestById(id);
+  // Fetch request, stages, and audit events ALL in parallel (no waterfall)
+  const [request, allStages, auditData] = await Promise.all([
+    getRequestById(id),
+    listStages(), // all active stages — cheap query, avoids waterfall
+    canViewAudit ? getAuditEventsForRequest(id, { limit: 20 }) : null,
+  ]);
 
   if (!request) {
     notFound();
   }
-
-  // Fetch stages and audit events in parallel
-  const [allStages, auditData] = await Promise.all([
-    listStages(request.flowType as FlowType),
-    canViewAudit ? getAuditEventsForRequest(id, { limit: 20 }) : null,
-  ]);
 
   return (
     <RequestDetail

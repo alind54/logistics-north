@@ -287,6 +287,7 @@ export async function getRequestById(requestId: string): Promise<RequestDetailDT
           stage: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'desc' },
+        take: 50,
       },
       stageHistory: {
         include: { stage: { select: { name: true } } },
@@ -477,7 +478,7 @@ export interface BoardColumn {
 
 export async function listRequestsForBoard(
   flowType: FlowType,
-  limitPerStage = 50
+  limitPerStage = 20
 ): Promise<BoardColumn[]> {
   // 1. Get all active stages for this flow type (1 query)
   const stages = await prisma.stage.findMany({

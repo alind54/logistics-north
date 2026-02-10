@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   DndContext,
   DragOverlay,
@@ -39,12 +38,12 @@ interface BoardProps {
 }
 
 export function Board({ initialFlowType, initialColumns, canDelete = false }: BoardProps) {
-  const router = useRouter();
   const [flowType, setFlowType] = useState<FlowType>(initialFlowType);
   const [columns, setColumns] = useState<BoardColumn[]>(initialColumns);
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   // Refs for SSE defer during drag, move debounce, and self-echo suppression
@@ -77,9 +76,13 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
       if (res.ok) {
         const data = await res.json();
         setColumns(data.data.columns);
+        setLoadError(false);
+      } else {
+        setLoadError(true);
       }
     } catch (error) {
       console.error('Failed to fetch board:', error);
+      setLoadError(true);
     } finally {
       if (!silent) setIsLoading(false);
     }
@@ -93,7 +96,7 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
 
   // Listen for real-time board updates via SSE (defer during drag, suppress self-echo)
   useBoardEvents((event) => {
-    if (event.type === 'STAGE_MOVED' || event.type === 'REQUEST_CREATED' || event.type === 'REQUEST_DELETED' || event.type === 'POLL_REFRESH') {
+    if (event.type === 'STAGE_MOVED' || event.type === 'REQUEST_CREATED' || event.type === 'REQUEST_DELETED' || event.type === 'REQUEST_UPDATED' || event.type === 'POLL_REFRESH') {
       // Suppress self-echo: if this client initiated the move, we already updated optimistically
       const eventRequestId = event.payload?.requestId;
       if (eventRequestId && recentMoveIds.current.has(eventRequestId)) {
@@ -170,7 +173,7 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
     } finally {
       movingIds.current.delete(requestId);
       // Clean up self-echo suppression after 5s (in case SSE event never arrives)
-      setTimeout(() => recentMoveIds.current.delete(requestId), 5000);
+      setTimeout(() => recentMoveIds.current.delete(requestId), 3000);
     }
   };
 
@@ -219,7 +222,6 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
   const handleRequestCreated = () => {
     setShowCreateDialog(false);
     fetchBoard(flowType);
-    router.refresh();
   };
 
   // Handle deleting a request
@@ -324,6 +326,20 @@ export function Board({ initialFlowType, initialColumns, canDelete = false }: Bo
           </Button>
         </div>
       </div>
+
+      {/* Load Error Banner */}
+      {loadError && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
+          <span>Failed to load board data. Showing last known state.</span>
+          <button
+            type="button"
+            className="ml-4 rounded border border-amber-500/30 px-2 py-0.5 text-xs hover:bg-amber-500/20"
+            onClick={() => fetchBoard(flowType)}
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Error Banner */}
       {moveError && (

@@ -17,11 +17,19 @@ interface RequestCardProps {
   isDragOverlay?: boolean;
 }
 
-const priorityColors: Record<Priority, string> = {
-  LOW: 'bg-slate-300',
-  NORMAL: 'bg-blue-400',
-  HIGH: 'bg-amber-400',
-  URGENT: 'bg-red-500',
+// Priority → left border stripe color
+const priorityBorder: Record<Priority, string> = {
+  LOW: 'border-l-slate-400',
+  NORMAL: 'border-l-blue-400',
+  HIGH: 'border-l-amber-400',
+  URGENT: 'border-l-red-500',
+};
+
+const priorityLabel: Record<Priority, string> = {
+  LOW: 'Low',
+  NORMAL: 'Normal',
+  HIGH: 'High',
+  URGENT: 'Urgent',
 };
 
 function formatDate(dateString: string | null): string {
@@ -95,39 +103,40 @@ export const RequestCard = memo(function RequestCard({
       style={style}
       {...(!isDragOverlay ? { ...attributes, ...listeners } : {})}
       className={cn(
-        'group relative rounded-lg border bg-card px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing',
+        'group relative rounded-md border-l-[3px] border bg-card px-2.5 py-2 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing',
+        priorityBorder[request.priority],
         isDragging && 'opacity-30',
         isDragOverlay && 'shadow-lg ring-2 ring-primary/30',
         isMoving && 'opacity-50'
       )}
     >
-      {/* Row 1: MRF + Priority dot */}
-      <div className="mb-1 flex items-center justify-between">
+      {/* Row 1: MRF + Priority label */}
+      <div className="mb-0.5 flex items-center justify-between">
         <span className="text-xs font-semibold font-mono text-primary">
           {formatMrfNumber(request.mrfNumber)}
         </span>
-        <div className="flex items-center gap-2">
-          <span className={cn('h-2 w-2 rounded-full', priorityColors[request.priority])} title={request.priority} />
-        </div>
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+          {priorityLabel[request.priority]}
+        </span>
       </div>
 
       {/* Row 2: Description */}
       <Link
         href={`/requests/${request.id}`}
-        className="mb-1.5 block text-sm font-medium leading-snug hover:text-primary"
+        className="mb-1 block text-sm font-medium leading-snug hover:text-primary"
         onClick={(e) => {
           if (isDragging) e.preventDefault();
         }}
         title={request.description}
       >
-        {request.description.length > 60
-          ? `${request.description.substring(0, 60)}...`
+        {request.description.length > 50
+          ? `${request.description.substring(0, 50)}...`
           : request.description}
       </Link>
 
       {/* Row 3: Due date + Days in stage + Owner */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-1.5">
           {request.dueDate && (
             <span className={cn(overdue && 'font-medium text-destructive')}>
               {overdue ? 'Overdue' : `Due ${formatDate(request.dueDate)}`}
@@ -145,18 +154,18 @@ export const RequestCard = memo(function RequestCard({
           )}
         </div>
         {request.owner && (
-          <span title={request.owner.email}>
+          <span className="truncate max-w-[60px]" title={request.owner.email}>
             {request.owner.email.split('@')[0]}
           </span>
         )}
       </div>
 
       {/* Action buttons - visible on hover */}
-      <div className="mt-1.5 flex justify-end gap-1">
+      <div className="mt-1 flex justify-end gap-1">
         {canDelete && onDelete && (
           <button
             type="button"
-            className="rounded border border-destructive/30 px-2.5 py-1 text-xs text-destructive transition-opacity hover:bg-destructive/10 sm:opacity-0 sm:group-hover:opacity-100"
+            className="rounded border border-destructive/30 px-2 py-0.5 text-[11px] text-destructive transition-opacity hover:bg-destructive/10 sm:opacity-0 sm:group-hover:opacity-100"
             onClick={(e) => {
               e.stopPropagation();
               handleDelete();
@@ -169,7 +178,7 @@ export const RequestCard = memo(function RequestCard({
         <div className="relative">
           <button
             type="button"
-            className="rounded border px-2.5 py-1 text-xs text-muted-foreground transition-opacity hover:bg-accent hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100"
+            className="rounded border px-2 py-0.5 text-[11px] text-muted-foreground transition-opacity hover:bg-accent hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100"
             onClick={(e) => {
               e.stopPropagation();
               setShowMoveMenu(!showMoveMenu);
@@ -186,8 +195,8 @@ export const RequestCard = memo(function RequestCard({
                 className="fixed inset-0 z-10"
                 onClick={() => setShowMoveMenu(false)}
               />
-              <div className="absolute top-full right-0 z-20 mt-1 w-48 rounded-md border bg-popover p-1 shadow-md">
-                <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+              <div className="absolute top-full right-0 z-20 mt-1 w-44 rounded-md border bg-popover p-1 shadow-md">
+                <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
                   Move to...
                 </p>
                 {availableStages.map((stage) => (

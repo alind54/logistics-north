@@ -62,11 +62,18 @@ async function main() {
   // Create transitions for ORDER flow
   console.log('\nCreating ORDER flow transitions...');
   const orderTransitions: [string, string][] = [
+    // Forward
     ['MRF', 'Supplier Assignment'],
     ['Supplier Assignment', 'Requisition'],
     ['Requisition', 'Order'],
     ['Order', 'Inventory'],
     ['Inventory', 'Done'],
+    // Backward
+    ['Supplier Assignment', 'MRF'],
+    ['Requisition', 'Supplier Assignment'],
+    ['Order', 'Requisition'],
+    ['Inventory', 'Order'],
+    ['Done', 'Inventory'],
   ];
 
   for (const [from, to] of orderTransitions) {
@@ -95,11 +102,18 @@ async function main() {
   // Create transitions for CONTRACT flow
   console.log('\nCreating CONTRACT flow transitions...');
   const contractTransitions: [string, string][] = [
+    // Forward
     ['MRF', 'Supplier Assignment'],
     ['Supplier Assignment', 'Requisition'],
     ['Requisition', 'Contract'],
     ['Contract', 'Certificate'],
     ['Certificate', 'Done'],
+    // Backward
+    ['Supplier Assignment', 'MRF'],
+    ['Requisition', 'Supplier Assignment'],
+    ['Contract', 'Requisition'],
+    ['Certificate', 'Contract'],
+    ['Done', 'Certificate'],
   ];
 
   for (const [from, to] of contractTransitions) {

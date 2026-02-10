@@ -47,7 +47,7 @@ export function useBoardEvents(onEvent: (event: BoardEvent) => void) {
     // other containers are missed. Poll every 30s to catch them.
     const pollInterval = setInterval(() => {
       callbackRef.current({ type: 'POLL_REFRESH', payload: {} });
-    }, 30_000);
+    }, 8_000);
 
     return () => {
       eventSource?.close();

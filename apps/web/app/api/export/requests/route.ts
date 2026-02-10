@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const requests = await prisma.request.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      take: 10000, // Safety limit to prevent OOM on large datasets
       select: {
         id: true,
         mrfNumber: true,

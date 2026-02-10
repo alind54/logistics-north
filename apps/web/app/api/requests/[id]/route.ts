@@ -49,6 +49,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const updated = await updateRequest(id, data, user.id);
 
+    eventBus.publish(BOARD_CHANNEL, {
+      type: 'REQUEST_UPDATED',
+      payload: { requestId: id },
+    });
+
     return apiSuccess(updated);
   } catch (error) {
     if (error instanceof Error && error.message === 'Request not found') {

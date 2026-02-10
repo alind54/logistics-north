@@ -38,11 +38,11 @@ export function Header({ user }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-card">
+    <header className="sticky top-0 z-50 border-b border-b-primary/20 bg-card">
       <div className="container flex h-12 items-center justify-between">
         {/* Logo and Desktop Nav */}
         <div className="flex items-center gap-6">
-          <Link href="/board" className="font-semibold">
+          <Link href="/board" className="font-semibold text-primary">
             Logistics North
           </Link>
           <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
@@ -55,7 +55,7 @@ export function Header({ user }: HeaderProps) {
                   className={cn(
                     'rounded-md px-3 py-2 text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-accent text-accent-foreground'
+                      ? 'bg-primary/10 text-primary border-b-2 border-primary'
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   )}
                   aria-current={isActive ? 'page' : undefined}
@@ -130,7 +130,7 @@ export function Header({ user }: HeaderProps) {
                 className={cn(
                   'block rounded-md px-3 py-2 text-sm font-medium transition-colors',
                   pathname === item.href || pathname.startsWith(item.href + '/')
-                    ? 'bg-accent text-accent-foreground'
+                    ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
                 onClick={() => setMobileMenuOpen(false)}

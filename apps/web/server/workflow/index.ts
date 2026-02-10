@@ -250,7 +250,8 @@ export async function moveStage(
         return { success: false, error: error.message };
       }
     }
-    throw error;
+    console.error('[moveStage] Unexpected error:', error);
+    return { success: false, error: 'Failed to move stage. Please try again.' };
   }
 }
 

@@ -98,7 +98,7 @@ export function useRequests(projectId: string | null) {
 
     if (error) {
       setRequests(prev => prev.filter(r => r.id !== tempId));
-      alert('Failed to create request: ' + error.message);
+      alert('Failed to create request. Please try again.');
     } else if (data) {
       setRequests(prev => prev.map(r => r.id === tempId ? mapRow(data as DbRequest) : r));
     }
@@ -112,7 +112,7 @@ export function useRequests(projectId: string | null) {
       .eq('id', id);
     if (error) {
       fetchRequests();
-      alert('Failed to update request: ' + error.message);
+      alert('Failed to update request. Please try again.');
     }
   };
 
@@ -122,7 +122,7 @@ export function useRequests(projectId: string | null) {
     const { error } = await supabase.from('requests').delete().eq('id', id);
     if (error) {
       if (backup) setRequests(prev => [...prev, backup]);
-      alert('Failed to delete request: ' + error.message);
+      alert('Failed to delete request. Please try again.');
     }
   };
 
@@ -141,7 +141,7 @@ export function useRequests(projectId: string | null) {
       .eq('id', id);
     if (error) {
       setRequests(prev => prev.map(r => r.id === id ? { ...r, stage: request.stage } : r));
-      alert('Failed to move request: ' + error.message);
+      alert('Failed to move request. Please try again.');
     }
   };
 
@@ -159,7 +159,7 @@ export function useRequests(projectId: string | null) {
       .eq('project_id', projectId);
     if (error) {
       fetchRequests();
-      alert('Failed to clear done items: ' + error.message);
+      alert('Failed to clear done items. Please try again.');
     }
     return doneCount;
   };

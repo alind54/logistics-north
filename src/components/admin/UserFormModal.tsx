@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Profile, AppRole } from '../../types';
 import Modal from '../Modal';
+import { validatePassword } from '../../lib/validation';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -44,8 +45,9 @@ export default function UserFormModal({ isOpen, onClose, onCreateUser, onUpdateU
       if (editingUser) {
         await onUpdateUser(editingUser.id, fullName, role, email !== editingUser.email ? email : undefined);
       } else {
-        if (password.length < 6) {
-          setError('Password must be at least 6 characters');
+        const { valid, message } = validatePassword(password);
+        if (!valid) {
+          setError(message);
           setSubmitting(false);
           return;
         }
@@ -99,7 +101,7 @@ export default function UserFormModal({ isOpen, onClose, onCreateUser, onUpdateU
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              placeholder="At least 6 characters"
+              placeholder="Min 8 chars, uppercase, lowercase, number"
               required
             />
           </div>

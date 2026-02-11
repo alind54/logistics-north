@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2, Eye, EyeOff } from 'lucide-react';
 import Header from '../components/Header';
 import { useAuth } from '../hooks/useAuth';
+import { validatePassword } from '../lib/validation';
 
 export default function SettingsPage() {
   const { profile, updateProfile, changePassword } = useAuth();
@@ -37,8 +38,9 @@ export default function SettingsPage() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwMsg('');
-    if (newPassword.length < 6) {
-      setPwMsg('Password must be at least 6 characters');
+    const { valid, message } = validatePassword(newPassword);
+    if (!valid) {
+      setPwMsg(message);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -130,7 +132,7 @@ export default function SettingsPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                placeholder="At least 6 characters"
+                placeholder="Min 8 chars, uppercase, lowercase, number"
                 required
               />
               <button

@@ -1,11 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const VALID_ROLES = ['admin', 'manager', 'logistics'];
+
+function fail(msg: string, status: number, headers: Record<string, string>) {
+  return new Response(JSON.stringify({ error: msg }), {
+    status,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+  });
+}
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -13,10 +22,7 @@ Deno.serve(async (req: Request) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing auth header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return fail('Missing auth header', 401, corsHeaders);
     }
 
     const supabaseUser = createClient(
@@ -26,10 +32,7 @@ Deno.serve(async (req: Request) => {
     );
     const { data: { user: caller } } = await supabaseUser.auth.getUser();
     if (!caller) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return fail('Invalid token', 401, corsHeaders);
     }
 
     const { data: callerProfile } = await supabaseUser
@@ -39,10 +42,7 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (callerProfile?.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return fail('Admin access required', 403, corsHeaders);
     }
 
     const supabaseAdmin = createClient(
@@ -54,6 +54,19 @@ Deno.serve(async (req: Request) => {
 
     switch (payload.action) {
       case 'create-user': {
+        if (!payload.email || !EMAIL_RE.test(payload.email)) {
+          return fail('Invalid email format', 400, corsHeaders);
+        }
+        if (!payload.password || typeof payload.password !== 'string' || payload.password.length < 8) {
+          return fail('Password must be at least 8 characters', 400, corsHeaders);
+        }
+        if (!payload.full_name || typeof payload.full_name !== 'string' || payload.full_name.length > 200) {
+          return fail('Full name is required (max 200 characters)', 400, corsHeaders);
+        }
+        if (!VALID_ROLES.includes(payload.role)) {
+          return fail('Invalid role', 400, corsHeaders);
+        }
+
         const { data, error } = await supabaseAdmin.auth.admin.createUser({
           email: payload.email,
           password: payload.password,
@@ -70,6 +83,19 @@ Deno.serve(async (req: Request) => {
       }
 
       case 'update-user': {
+        if (!payload.user_id || !UUID_RE.test(payload.user_id)) {
+          return fail('Invalid user ID', 400, corsHeaders);
+        }
+        if (payload.full_name !== undefined && (typeof payload.full_name !== 'string' || payload.full_name.length > 200)) {
+          return fail('Full name must be a string (max 200 characters)', 400, corsHeaders);
+        }
+        if (payload.role !== undefined && !VALID_ROLES.includes(payload.role)) {
+          return fail('Invalid role', 400, corsHeaders);
+        }
+        if (payload.email !== undefined && !EMAIL_RE.test(payload.email)) {
+          return fail('Invalid email format', 400, corsHeaders);
+        }
+
         const updates: Record<string, unknown> = {};
         if (payload.full_name !== undefined) updates.full_name = payload.full_name;
         if (payload.role !== undefined) updates.role = payload.role;
@@ -95,6 +121,9 @@ Deno.serve(async (req: Request) => {
       }
 
       case 'delete-user': {
+        if (!payload.user_id || !UUID_RE.test(payload.user_id)) {
+          return fail('Invalid user ID', 400, corsHeaders);
+        }
         const { error } = await supabaseAdmin.auth.admin.deleteUser(payload.user_id);
         if (error) throw error;
         return new Response(JSON.stringify({ success: true }), {
@@ -114,6 +143,12 @@ Deno.serve(async (req: Request) => {
       }
 
       case 'reset-password': {
+        if (!payload.user_id || !UUID_RE.test(payload.user_id)) {
+          return fail('Invalid user ID', 400, corsHeaders);
+        }
+        if (!payload.new_password || typeof payload.new_password !== 'string' || payload.new_password.length < 8) {
+          return fail('Password must be at least 8 characters', 400, corsHeaders);
+        }
         const { error } = await supabaseAdmin.auth.admin.updateUserById(
           payload.user_id,
           { password: payload.new_password }
@@ -125,15 +160,13 @@ Deno.serve(async (req: Request) => {
       }
 
       default:
-        return new Response(JSON.stringify({ error: 'Unknown action' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return fail('Unknown action', 400, corsHeaders);
     }
   } catch (err) {
+    console.error('admin-user-management error:', err);
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'An unexpected error occurred' }),
+      { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

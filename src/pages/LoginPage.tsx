@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Package, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_SECONDS = 60;
 
 export default function LoginPage() {
   const { user, loading, signIn } = useAuth();
@@ -9,6 +12,32 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutEnd, setLockoutEnd] = useState<number | null>(null);
+  const [lockoutRemaining, setLockoutRemaining] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const isLockedOut = lockoutEnd !== null && Date.now() < lockoutEnd;
+
+  useEffect(() => {
+    if (!lockoutEnd) return;
+    const tick = () => {
+      const remaining = Math.ceil((lockoutEnd - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setLockoutEnd(null);
+        setLockoutRemaining(0);
+        setFailedAttempts(0);
+        if (timerRef.current) clearInterval(timerRef.current);
+      } else {
+        setLockoutRemaining(remaining);
+      }
+    };
+    tick();
+    timerRef.current = setInterval(tick, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [lockoutEnd]);
 
   if (loading) {
     return (
@@ -24,12 +53,22 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLockedOut) return;
     setError('');
     setSubmitting(true);
 
     const { error: signInError } = await signIn(email, password);
     if (signInError) {
-      setError(signInError);
+      const attempts = failedAttempts + 1;
+      setFailedAttempts(attempts);
+      if (attempts >= MAX_ATTEMPTS) {
+        setLockoutEnd(Date.now() + LOCKOUT_SECONDS * 1000);
+        setError(`Too many failed attempts. Try again in ${LOCKOUT_SECONDS} seconds.`);
+      } else if (attempts >= 3) {
+        setError(`Invalid email or password. ${MAX_ATTEMPTS - attempts} attempt(s) remaining.`);
+      } else {
+        setError('Invalid email or password.');
+      }
     }
     setSubmitting(false);
   };
@@ -52,6 +91,12 @@ export default function LoginPage() {
             </div>
           )}
 
+          {isLockedOut && (
+            <div className="bg-amber-50 text-amber-700 text-sm px-4 py-3 rounded-lg border border-amber-100">
+              Account locked. Try again in {lockoutRemaining}s.
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
@@ -62,6 +107,7 @@ export default function LoginPage() {
               placeholder="you@company.com"
               required
               autoComplete="email"
+              disabled={isLockedOut}
             />
           </div>
 
@@ -75,12 +121,13 @@ export default function LoginPage() {
               placeholder="Enter your password"
               required
               autoComplete="current-password"
+              disabled={isLockedOut}
             />
           </div>
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || isLockedOut}
             className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium text-sm hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitting ? (

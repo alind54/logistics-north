@@ -7,10 +7,10 @@ import TodoFormModal from './TodoFormModal';
 interface TodoListProps {
   todos: Todo[];
   addTodo: (task: string, notes: string) => void;
-  updateTodo: (id: number, task: string, notes: string) => void;
-  deleteTodo: (id: number) => void;
-  toggleTodo: (id: number) => void;
-  clearCompleted: () => number;
+  updateTodo: (id: string, task: string, notes: string) => void;
+  deleteTodo: (id: string) => void;
+  toggleTodo: (id: string) => void;
+  clearCompleted: () => number | Promise<number>;
 }
 
 export default function TodoList({
@@ -45,9 +45,9 @@ export default function TodoList({
     setEditingTodo(null);
   };
 
-  const handleClearCompleted = () => {
+  const handleClearCompleted = async () => {
     if (window.confirm(`Clear all ${completedCount} completed task(s)?`)) {
-      const count = clearCompleted();
+      const count = await clearCompleted();
       alert(`Cleared ${count} completed task(s)!`);
     }
   };

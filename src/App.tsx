@@ -1,29 +1,30 @@
-import { useState } from 'react';
-import type { TabId } from './types';
-import { useRequests } from './hooks/useRequests';
-import { useTodos } from './hooks/useTodos';
-import Header from './components/Header';
-import TabNavigation from './components/TabNavigation';
-import RequestTracker from './components/request-tracker/RequestTracker';
-import TodoList from './components/todo-list/TodoList';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProjectProvider } from './contexts/ProjectContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import SettingsPage from './pages/SettingsPage';
+import AdminPage from './pages/AdminPage';
+import ProjectsPage from './pages/ProjectsPage';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<TabId>('requests');
-  const requestsHook = useRequests();
-  const todosHook = useTodos();
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <Header />
-      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {activeTab === 'requests' ? (
-          <RequestTracker {...requestsHook} />
-        ) : (
-          <TodoList {...todosHook} />
-        )}
-      </main>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <ProjectProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+            </Route>
+          </Routes>
+        </ProjectProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

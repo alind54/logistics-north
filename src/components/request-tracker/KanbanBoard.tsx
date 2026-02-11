@@ -4,9 +4,9 @@ import StageColumn from './StageColumn';
 
 interface KanbanBoardProps {
   getRequestsByStage: (stageId: string) => Request[];
-  onMove: (id: number, direction: 'forward' | 'backward') => void;
+  onMove: (id: string, direction: 'forward' | 'backward') => void;
   onEdit: (request: Request) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 export default function KanbanBoard({ getRequestsByStage, onMove, onEdit, onDelete }: KanbanBoardProps) {

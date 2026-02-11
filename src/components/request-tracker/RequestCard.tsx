@@ -1,13 +1,14 @@
 import { ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react';
 import type { Request } from '../../types';
+import RoleGate from '../auth/RoleGate';
 
 interface RequestCardProps {
   request: Request;
   stageIndex: number;
   totalStages: number;
-  onMove: (id: number, direction: 'forward' | 'backward') => void;
+  onMove: (id: string, direction: 'forward' | 'backward') => void;
   onEdit: (request: Request) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 export default function RequestCard({ request, stageIndex, totalStages, onMove, onEdit, onDelete }: RequestCardProps) {
@@ -36,20 +37,22 @@ export default function RequestCard({ request, stageIndex, totalStages, onMove, 
           )}
         </div>
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => onEdit(request)}
-            className="p-1 rounded hover:bg-blue-50 text-blue-400 hover:text-blue-600 transition-colors"
-            title="Edit"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleDelete}
-            className="p-1 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <RoleGate allowed={['admin', 'manager']}>
+            <button
+              onClick={() => onEdit(request)}
+              className="p-1 rounded hover:bg-blue-50 text-blue-400 hover:text-blue-600 transition-colors"
+              title="Edit"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleDelete}
+              className="p-1 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </RoleGate>
         </div>
         <div className="flex items-center gap-1">
           {stageIndex < totalStages - 1 && (

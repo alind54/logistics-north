@@ -6,9 +6,9 @@ interface StageColumnProps {
   requests: Request[];
   stageIndex: number;
   totalStages: number;
-  onMove: (id: number, direction: 'forward' | 'backward') => void;
+  onMove: (id: string, direction: 'forward' | 'backward') => void;
   onEdit: (request: Request) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 export default function StageColumn({ stage, requests, stageIndex, totalStages, onMove, onEdit, onDelete }: StageColumnProps) {

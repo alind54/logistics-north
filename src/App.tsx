@@ -7,6 +7,8 @@ import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import ProjectsPage from './pages/ProjectsPage';
+import AuditLogPage from './pages/AuditLogPage';
+import CorrectionsPage from './pages/CorrectionsPage';
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/audit" element={<AuditLogPage />} />
+              <Route path="/corrections" element={<CorrectionsPage />} />
             </Route>
           </Routes>
         </ProjectProvider>

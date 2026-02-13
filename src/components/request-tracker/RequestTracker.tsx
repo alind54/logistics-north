@@ -4,15 +4,19 @@ import type { Request } from '../../types';
 import KanbanBoard from './KanbanBoard';
 import RequestFormModal from './RequestFormModal';
 import RoleGate from '../auth/RoleGate';
+import { useAttachmentCounts } from '../../hooks/useAttachmentCounts';
+import { useAttachments } from '../../hooks/useAttachments';
 
 interface RequestTrackerProps {
   requests: Request[];
-  addRequest: (description: string, notes: string) => void;
+  addRequest: (description: string, notes: string) => Promise<string | undefined> | void;
   updateRequest: (id: string, description: string, notes: string) => void;
   deleteRequest: (id: string) => void;
   moveRequest: (id: string, direction: 'forward' | 'backward') => void;
+  moveRequestToStage: (id: string, targetStageId: string) => void;
   clearDoneRequests: () => number | Promise<number>;
   getRequestsByStage: (stageId: string) => Request[];
+  projectId?: string | null;
 }
 
 export default function RequestTracker({
@@ -21,11 +25,15 @@ export default function RequestTracker({
   updateRequest,
   deleteRequest,
   moveRequest,
+  moveRequestToStage,
   clearDoneRequests,
   getRequestsByStage,
+  projectId,
 }: RequestTrackerProps) {
   const [showModal, setShowModal] = useState(false);
   const [editingRequest, setEditingRequest] = useState<Request | null>(null);
+  const { counts: attachmentCounts, refreshCounts } = useAttachmentCounts(projectId ?? null);
+  const { uploadFile } = useAttachments(null);
 
   const doneCount = requests.filter(r => r.stage === 'done').length;
 
@@ -34,11 +42,17 @@ export default function RequestTracker({
     setShowModal(true);
   };
 
-  const handleSubmit = (description: string, notes: string) => {
+  const handleSubmit = async (description: string, notes: string, stagedFiles?: File[]) => {
     if (editingRequest) {
       updateRequest(editingRequest.id, description, notes);
     } else {
-      addRequest(description, notes);
+      const newId = await addRequest(description, notes);
+      if (newId && stagedFiles && stagedFiles.length > 0 && projectId) {
+        for (const file of stagedFiles) {
+          await uploadFile(newId, projectId, file);
+        }
+        refreshCounts();
+      }
     }
     setEditingRequest(null);
   };
@@ -85,8 +99,10 @@ export default function RequestTracker({
       <KanbanBoard
         getRequestsByStage={getRequestsByStage}
         onMove={moveRequest}
+        onMoveToStage={moveRequestToStage}
         onEdit={handleEdit}
         onDelete={deleteRequest}
+        attachmentCounts={attachmentCounts}
       />
 
       <RequestFormModal
@@ -94,6 +110,8 @@ export default function RequestTracker({
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
         initialData={editingRequest ? { description: editingRequest.description, notes: editingRequest.notes } : null}
+        requestId={editingRequest?.id}
+        projectId={projectId}
       />
     </div>
   );

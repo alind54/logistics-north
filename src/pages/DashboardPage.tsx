@@ -7,6 +7,7 @@ import Header from '../components/Header';
 import TabNavigation from '../components/TabNavigation';
 import RequestTracker from '../components/request-tracker/RequestTracker';
 import TodoList from '../components/todo-list/TodoList';
+import ProjectDashboard from '../components/dashboard/ProjectDashboard';
 import { FolderOpen } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -47,10 +48,12 @@ export default function DashboardPage() {
       <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
       <main className="max-w-7xl mx-auto px-4 py-6">
         {activeTab === 'requests' ? (
-          <RequestTracker {...requestsHook} />
-        ) : (
+          <RequestTracker {...requestsHook} projectId={selectedProjectId} />
+        ) : activeTab === 'todos' ? (
           <TodoList {...todosHook} />
-        )}
+        ) : activeTab === 'dashboard' ? (
+          <ProjectDashboard projectId={selectedProjectId} />
+        ) : null}
       </main>
     </div>
   );

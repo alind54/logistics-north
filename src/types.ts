@@ -40,6 +40,8 @@ export interface Request {
   project_id: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
 export interface Todo {
@@ -51,6 +53,35 @@ export interface Todo {
   project_id: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
-export type TabId = 'requests' | 'todos';
+export interface Attachment {
+  id: string;
+  request_id: string;
+  project_id: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  storage_path: string;
+  uploaded_by: string;
+  created_at: string;
+}
+
+export interface AuditLog {
+  id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  project_id: string | null;
+  user_id: string;
+  changes: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  user_email?: string;
+  user_name?: string;
+  project_name?: string;
+}
+
+export type TabId = 'requests' | 'todos' | 'dashboard';

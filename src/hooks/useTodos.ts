@@ -37,6 +37,7 @@ export function useTodos(projectId: string | null) {
       .from('todos')
       .select('*')
       .eq('project_id', projectId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: true });
     if (!error && data) {
       setTodos((data as DbTodo[]).map(mapRow));

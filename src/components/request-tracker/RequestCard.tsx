@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit2, Trash2, Paperclip } from 'lucide-react';
 import type { Request } from '../../types';
 import RoleGate from '../auth/RoleGate';
 
@@ -9,9 +9,11 @@ interface RequestCardProps {
   onMove: (id: string, direction: 'forward' | 'backward') => void;
   onEdit: (request: Request) => void;
   onDelete: (id: string) => void;
+  isDragging?: boolean;
+  attachmentCount?: number;
 }
 
-export default function RequestCard({ request, stageIndex, totalStages, onMove, onEdit, onDelete }: RequestCardProps) {
+export default function RequestCard({ request, stageIndex, totalStages, onMove, onEdit, onDelete, isDragging, attachmentCount }: RequestCardProps) {
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this request?')) {
       onDelete(request.id);
@@ -19,10 +21,18 @@ export default function RequestCard({ request, stageIndex, totalStages, onMove, 
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 hover:shadow-md transition-shadow">
+    <div className={`bg-white rounded-lg shadow-sm border border-gray-100 p-3 hover:shadow-md transition-all ${
+      isDragging ? 'shadow-lg scale-105 rotate-1 opacity-90' : ''
+    }`}>
       <p className="font-semibold text-gray-800 text-sm leading-snug">{request.description}</p>
       {request.notes && (
         <p className="text-xs text-gray-500 mt-1.5 bg-gray-50 rounded-md px-2 py-1">{request.notes}</p>
+      )}
+      {(attachmentCount ?? 0) > 0 && (
+        <div className="flex items-center gap-1 mt-1.5 text-xs text-blue-500">
+          <Paperclip className="w-3 h-3" />
+          <span>{attachmentCount} file{attachmentCount !== 1 ? 's' : ''}</span>
+        </div>
       )}
       <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-50">
         <div className="flex items-center gap-1">

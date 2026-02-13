@@ -1,29 +1,53 @@
 import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import Modal from '../Modal';
+import FileUploadZone from './FileUploadZone';
+import AttachmentList from './AttachmentList';
+import { useAttachments } from '../../hooks/useAttachments';
 
 interface RequestFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (description: string, notes: string) => void;
+  onSubmit: (description: string, notes: string, stagedFiles?: File[]) => void;
   initialData?: { description: string; notes: string } | null;
+  requestId?: string | null;
+  projectId?: string | null;
 }
 
-export default function RequestFormModal({ isOpen, onClose, onSubmit, initialData }: RequestFormModalProps) {
+export default function RequestFormModal({ isOpen, onClose, onSubmit, initialData, requestId, projectId }: RequestFormModalProps) {
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const { attachments, fetchAttachments, uploadFile, deleteFile, getDownloadUrl } = useAttachments(requestId ?? null);
 
   useEffect(() => {
     if (isOpen) {
       setDescription(initialData?.description ?? '');
       setNotes(initialData?.notes ?? '');
+      setStagedFiles([]);
+      if (requestId) fetchAttachments();
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, requestId, fetchAttachments]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim()) return;
-    onSubmit(description.trim(), notes.trim());
+    onSubmit(description.trim(), notes.trim(), requestId ? undefined : stagedFiles);
     onClose();
+  };
+
+  const handleUploadForExisting = async (file: File): Promise<boolean> => {
+    if (!requestId || !projectId) return false;
+    return uploadFile(requestId, projectId, file);
+  };
+
+  const handleStageFile = async (file: File): Promise<boolean> => {
+    setStagedFiles(prev => [...prev, file]);
+    return true;
+  };
+
+  const removeStagedFile = (index: number) => {
+    setStagedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -52,6 +76,44 @@ export default function RequestFormModal({ isOpen, onClose, onSubmit, initialDat
             placeholder="Optional notes..."
           />
         </div>
+
+        {projectId && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Attachments</label>
+            {requestId ? (
+              <>
+                <AttachmentList attachments={attachments} onDelete={deleteFile} onDownload={getDownloadUrl} />
+                <div className={attachments.length > 0 ? 'mt-2' : ''}>
+                  <FileUploadZone onUpload={handleUploadForExisting} />
+                </div>
+              </>
+            ) : (
+              <>
+                {stagedFiles.length > 0 && (
+                  <div className="space-y-1.5 mb-2">
+                    {stagedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 text-sm">
+                        <span className="flex-1 truncate text-gray-700">{file.name}</span>
+                        <span className="text-xs text-gray-400 flex-shrink-0">
+                          {file.size < 1024 ? `${file.size} B` : file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / (1024 * 1024)).toFixed(1)} MB`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeStagedFile(index)}
+                          className="p-1 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <FileUploadZone onUpload={handleStageFile} />
+              </>
+            )}
+          </div>
+        )}
+
         <div className="flex justify-end gap-2 pt-2">
           <button
             type="button"

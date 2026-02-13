@@ -38,6 +38,7 @@ export function useRequests(projectId: string | null) {
       .from('requests')
       .select('*')
       .eq('project_id', projectId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: true });
     if (!error && data) {
       setRequests((data as DbRequest[]).map(mapRow));
@@ -75,7 +76,23 @@ export function useRequests(projectId: string | null) {
     };
   }, [user, projectId, fetchRequests]);
 
-  const addRequest = async (description: string, notes: string) => {
+  const moveRequestToStage = async (id: string, targetStageId: string) => {
+    const request = requests.find(r => r.id === id);
+    if (!request || request.stage === targetStageId) return;
+    if (!STAGES.some(s => s.id === targetStageId)) return;
+
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, stage: targetStageId } : r));
+    const { error } = await supabase
+      .from('requests')
+      .update({ stage_id: targetStageId })
+      .eq('id', id);
+    if (error) {
+      setRequests(prev => prev.map(r => r.id === id ? { ...r, stage: request.stage } : r));
+      alert('Failed to move request. Please try again.');
+    }
+  };
+
+  const addRequest = async (description: string, notes: string): Promise<string | undefined> => {
     if (!user || !projectId) return;
     const tempId = crypto.randomUUID();
     const optimistic: Request = {
@@ -99,8 +116,11 @@ export function useRequests(projectId: string | null) {
     if (error) {
       setRequests(prev => prev.filter(r => r.id !== tempId));
       alert('Failed to create request. Please try again.');
+      return undefined;
     } else if (data) {
-      setRequests(prev => prev.map(r => r.id === tempId ? mapRow(data as DbRequest) : r));
+      const mapped = mapRow(data as DbRequest);
+      setRequests(prev => prev.map(r => r.id === tempId ? mapped : r));
+      return mapped.id;
     }
   };
 
@@ -174,6 +194,7 @@ export function useRequests(projectId: string | null) {
     updateRequest,
     deleteRequest,
     moveRequest,
+    moveRequestToStage,
     clearDoneRequests,
     getRequestsByStage,
   };

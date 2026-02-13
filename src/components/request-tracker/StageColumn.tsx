@@ -1,3 +1,4 @@
+import { Droppable, Draggable } from '@hello-pangea/dnd';
 import type { Request, Stage } from '../../types';
 import RequestCard from './RequestCard';
 
@@ -9,9 +10,10 @@ interface StageColumnProps {
   onMove: (id: string, direction: 'forward' | 'backward') => void;
   onEdit: (request: Request) => void;
   onDelete: (id: string) => void;
+  attachmentCounts?: Record<string, number>;
 }
 
-export default function StageColumn({ stage, requests, stageIndex, totalStages, onMove, onEdit, onDelete }: StageColumnProps) {
+export default function StageColumn({ stage, requests, stageIndex, totalStages, onMove, onEdit, onDelete, attachmentCounts }: StageColumnProps) {
   return (
     <div className="flex flex-col bg-gray-50/80 rounded-xl overflow-hidden border border-gray-200/60 min-h-[200px]">
       <div className={`bg-gradient-to-r ${stage.color} text-white px-3 py-2.5 flex items-center justify-between`}>
@@ -20,23 +22,45 @@ export default function StageColumn({ stage, requests, stageIndex, totalStages, 
           {requests.length}
         </span>
       </div>
-      <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-300px)]">
-        {requests.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center py-4">No items</p>
-        ) : (
-          requests.map((request) => (
-            <RequestCard
-              key={request.id}
-              request={request}
-              stageIndex={stageIndex}
-              totalStages={totalStages}
-              onMove={onMove}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          ))
+      <Droppable droppableId={stage.id}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className={`flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-300px)] transition-colors ${
+              snapshot.isDraggingOver ? 'bg-blue-50/50' : ''
+            }`}
+          >
+            {requests.length === 0 && !snapshot.isDraggingOver ? (
+              <p className="text-xs text-gray-400 text-center py-4">No items</p>
+            ) : (
+              requests.map((request, index) => (
+                <Draggable key={request.id} draggableId={request.id} index={index}>
+                  {(dragProvided, dragSnapshot) => (
+                    <div
+                      ref={dragProvided.innerRef}
+                      {...dragProvided.draggableProps}
+                      {...dragProvided.dragHandleProps}
+                    >
+                      <RequestCard
+                        request={request}
+                        stageIndex={stageIndex}
+                        totalStages={totalStages}
+                        onMove={onMove}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        isDragging={dragSnapshot.isDragging}
+                        attachmentCount={attachmentCounts?.[request.id] ?? 0}
+                      />
+                    </div>
+                  )}
+                </Draggable>
+              ))
+            )}
+            {provided.placeholder}
+          </div>
         )}
-      </div>
+      </Droppable>
     </div>
   );
 }

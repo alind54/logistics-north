@@ -55,7 +55,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
             Audit Log
           </button>
         )}
-        {isAdmin && (
+        {(isAdmin || isManager) && (
           <button
             onClick={() => navigate('/admin')}
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all duration-200 bg-white text-gray-500 hover:shadow-md hover:scale-[1.02]"

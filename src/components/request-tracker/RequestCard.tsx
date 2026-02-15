@@ -4,8 +4,8 @@ import RoleGate from '../auth/RoleGate';
 
 interface RequestCardProps {
   request: Request;
-  stageIndex: number;
-  totalStages: number;
+  canMoveBackward: boolean;
+  canMoveForward: boolean;
   onMove: (id: string, direction: 'forward' | 'backward') => void;
   onEdit: (request: Request) => void;
   onDelete: (id: string) => void;
@@ -13,7 +13,7 @@ interface RequestCardProps {
   attachmentCount?: number;
 }
 
-export default function RequestCard({ request, stageIndex, totalStages, onMove, onEdit, onDelete, isDragging, attachmentCount }: RequestCardProps) {
+export default function RequestCard({ request, canMoveBackward, canMoveForward, onMove, onEdit, onDelete, isDragging, attachmentCount }: RequestCardProps) {
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this request?')) {
       onDelete(request.id);
@@ -43,7 +43,7 @@ export default function RequestCard({ request, stageIndex, totalStages, onMove, 
       )}
       <div className={`flex items-center justify-between mt-3 pt-2 border-t ${urgent ? 'border-red-200' : 'border-gray-50'}`}>
         <div className="flex items-center gap-1">
-          {stageIndex > 0 && (
+          {canMoveBackward && (
             <button
               onClick={() => onMove(request.id, 'backward')}
               className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
@@ -72,7 +72,7 @@ export default function RequestCard({ request, stageIndex, totalStages, onMove, 
           </RoleGate>
         </div>
         <div className="flex items-center gap-1">
-          {stageIndex < totalStages - 1 && (
+          {canMoveForward && (
             <button
               onClick={() => onMove(request.id, 'forward')}
               className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"

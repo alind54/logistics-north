@@ -1,6 +1,5 @@
 import { Package } from 'lucide-react';
 import ProfileMenu from './profile/ProfileMenu';
-import ProjectSelector from './ProjectSelector';
 
 export default function Header() {
   return (
@@ -10,10 +9,7 @@ export default function Header() {
           <Package className="w-8 h-8" />
           <h1 className="text-2xl font-bold tracking-tight">Logistics Request Tracker</h1>
         </div>
-        <div className="flex items-center gap-4">
-          <ProjectSelector />
-          <ProfileMenu />
-        </div>
+        <ProfileMenu />
       </div>
     </header>
   );

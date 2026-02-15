@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase';
 import type { Profile, AppRole } from '../types';
 
 export default function AdminPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isManager } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,10 +34,10 @@ export default function AdminPage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  if (!isAdmin) {
+  if (!isAdmin && !isManager) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <p className="text-gray-500">Access denied. Admin role required.</p>
+        <p className="text-gray-500">Access denied. Admin or manager role required.</p>
       </div>
     );
   }

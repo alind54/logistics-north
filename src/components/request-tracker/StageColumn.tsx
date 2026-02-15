@@ -5,15 +5,15 @@ import RequestCard from './RequestCard';
 interface StageColumnProps {
   stage: Stage;
   requests: Request[];
-  stageIndex: number;
-  totalStages: number;
+  canMoveBackward: boolean;
+  canMoveForward: boolean;
   onMove: (id: string, direction: 'forward' | 'backward') => void;
   onEdit: (request: Request) => void;
   onDelete: (id: string) => void;
   attachmentCounts?: Record<string, number>;
 }
 
-export default function StageColumn({ stage, requests, stageIndex, totalStages, onMove, onEdit, onDelete, attachmentCounts }: StageColumnProps) {
+export default function StageColumn({ stage, requests, canMoveBackward, canMoveForward, onMove, onEdit, onDelete, attachmentCounts }: StageColumnProps) {
   return (
     <div className="flex flex-col bg-gray-50/80 rounded-xl overflow-hidden border border-gray-200/60 min-h-[200px]">
       <div className={`bg-gradient-to-r ${stage.color} text-white px-3 py-2.5 flex items-center justify-between`}>
@@ -45,8 +45,8 @@ export default function StageColumn({ stage, requests, stageIndex, totalStages, 
                     >
                       <RequestCard
                         request={request}
-                        stageIndex={stageIndex}
-                        totalStages={totalStages}
+                        canMoveBackward={canMoveBackward}
+                        canMoveForward={canMoveForward}
                         onMove={onMove}
                         onEdit={onEdit}
                         onDelete={onDelete}

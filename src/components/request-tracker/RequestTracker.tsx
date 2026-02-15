@@ -1,9 +1,7 @@
-import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import type { Request } from '../../types';
 import KanbanBoard from './KanbanBoard';
 import RequestFormModal from './RequestFormModal';
-import RoleGate from '../auth/RoleGate';
 import { useAttachmentCounts } from '../../hooks/useAttachmentCounts';
 import { useAttachments } from '../../hooks/useAttachments';
 
@@ -17,25 +15,33 @@ interface RequestTrackerProps {
   clearDoneRequests: () => number | Promise<number>;
   getRequestsByStage: (stageId: string) => Request[];
   projectId?: string | null;
+  showNewRequestModal?: boolean;
+  onCloseNewRequestModal?: () => void;
 }
 
 export default function RequestTracker({
-  requests,
   addRequest,
   updateRequest,
   deleteRequest,
   moveRequest,
   moveRequestToStage,
-  clearDoneRequests,
   getRequestsByStage,
   projectId,
+  showNewRequestModal,
+  onCloseNewRequestModal,
 }: RequestTrackerProps) {
   const [showModal, setShowModal] = useState(false);
   const [editingRequest, setEditingRequest] = useState<Request | null>(null);
   const { counts: attachmentCounts, refreshCounts } = useAttachmentCounts(projectId ?? null);
   const { uploadFile } = useAttachments(null);
 
-  const doneCount = requests.filter(r => r.stage === 'done').length;
+  // Open modal when parent triggers it
+  useEffect(() => {
+    if (showNewRequestModal) {
+      setEditingRequest(null);
+      setShowModal(true);
+    }
+  }, [showNewRequestModal]);
 
   const handleEdit = (request: Request) => {
     setEditingRequest(request);
@@ -60,42 +66,11 @@ export default function RequestTracker({
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingRequest(null);
-  };
-
-  const handleClearDone = async () => {
-    if (window.confirm(`Clear all ${doneCount} done item(s)?`)) {
-      const count = await clearDoneRequests();
-      alert(`Cleared ${count} done item(s)!`);
-    }
+    onCloseNewRequestModal?.();
   };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <RoleGate allowed={['admin', 'manager']}>
-            {doneCount > 0 && (
-              <button
-                onClick={handleClearDone}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:from-red-600 hover:to-pink-600 transition-all shadow-md text-sm font-medium"
-              >
-                <Trash2 className="w-4 h-4" />
-                Clear Done Items ({doneCount})
-              </button>
-            )}
-          </RoleGate>
-        </div>
-        <RoleGate allowed={['admin', 'manager']}>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all shadow-md text-sm font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            New Request
-          </button>
-        </RoleGate>
-      </div>
-
       <KanbanBoard
         getRequestsByStage={getRequestsByStage}
         onMove={moveRequest}

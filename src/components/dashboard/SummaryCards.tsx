@@ -8,7 +8,7 @@ interface SummaryCardsProps {
 
 export default function SummaryCards({ requestsByStage, totalAttachments, todoStats }: SummaryCardsProps) {
   const totalRequests = Object.values(requestsByStage).reduce((sum, count) => sum + count, 0);
-  const completedRequests = requestsByStage['done'] || 0;
+  const completedRequests = (requestsByStage['done_orders'] || 0) + (requestsByStage['done_contracts'] || 0);
   const inProgressRequests = totalRequests - completedRequests;
 
   const cards = [

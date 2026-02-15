@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Request } from '../types';
-import { STAGES } from '../constants';
+import { STAGES, STAGE_TRANSITIONS, DONE_STAGE_IDS } from '../constants';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
@@ -157,12 +157,19 @@ export function useRequests(projectId: string | null) {
   const moveRequest = async (id: string, direction: 'forward' | 'backward') => {
     const request = requests.find(r => r.id === id);
     if (!request) return;
-    const currentIndex = STAGES.findIndex(s => s.id === request.stage);
-    const newIndex = direction === 'forward' ? currentIndex + 1 : currentIndex - 1;
-    if (newIndex < 0 || newIndex >= STAGES.length) return;
-    const newStageId = STAGES[newIndex].id;
+    const transitions = STAGE_TRANSITIONS[request.stage];
+    if (!transitions) return;
 
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, stage: newStageId } : r));
+    let newStageId: string | null = null;
+    if (direction === 'forward') {
+      if (transitions.next.length === 1) newStageId = transitions.next[0];
+      // If multiple next stages (branch point), do nothing — user must drag
+    } else {
+      newStageId = transitions.prev;
+    }
+    if (!newStageId) return;
+
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, stage: newStageId! } : r));
     const { error } = await supabase
       .from('requests')
       .update({ stage_id: newStageId })
@@ -175,15 +182,15 @@ export function useRequests(projectId: string | null) {
 
   const clearDoneRequests = async (): Promise<number> => {
     if (!projectId) return 0;
-    const doneItems = requests.filter(r => r.stage === 'done');
+    const doneItems = requests.filter(r => DONE_STAGE_IDS.includes(r.stage));
     const doneCount = doneItems.length;
     if (doneCount === 0) return 0;
 
-    setRequests(prev => prev.filter(r => r.stage !== 'done'));
+    setRequests(prev => prev.filter(r => !DONE_STAGE_IDS.includes(r.stage)));
     const { error } = await supabase
       .from('requests')
       .delete()
-      .eq('stage_id', 'done')
+      .in('stage_id', DONE_STAGE_IDS)
       .eq('project_id', projectId);
     if (error) {
       fetchRequests();

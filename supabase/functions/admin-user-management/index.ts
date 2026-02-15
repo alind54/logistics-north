@@ -41,8 +41,8 @@ Deno.serve(async (req: Request) => {
       .eq('id', caller.id)
       .single();
 
-    if (callerProfile?.role !== 'admin') {
-      return fail('Admin access required', 403, corsHeaders);
+    if (!['admin', 'manager'].includes(callerProfile?.role)) {
+      return fail('Admin or manager access required', 403, corsHeaders);
     }
 
     const supabaseAdmin = createClient(

@@ -43,24 +43,23 @@ export default function AdminPage() {
   }
 
   const callEdgeFunction = async (payload: Record<string, unknown>) => {
-    const { data, error: fnError } = await supabase.functions.invoke('admin-user-management', {
-      body: payload,
-    });
-    if (fnError) {
-      // Extract the actual error message from the edge function response body
-      const context = (fnError as Record<string, unknown>).context;
-      if (context instanceof Response) {
-        try {
-          const body = await context.json();
-          if (body?.error) throw new Error(body.error);
-        } catch (e) {
-          if (e instanceof Error && e.message !== fnError.message) throw e;
-        }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-user-management`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(payload),
       }
-      throw new Error(fnError.message);
-    }
-    if (data?.error) throw new Error(data.error);
-    return data;
+    );
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || 'An unexpected error occurred');
+    return body;
   };
 
   const handleCreate = async (email: string, password: string, fullName: string, role: AppRole) => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, AlertTriangle } from 'lucide-react';
 import Modal from '../Modal';
 import FileUploadZone from './FileUploadZone';
 import AttachmentList from './AttachmentList';
@@ -8,8 +8,8 @@ import { useAttachments } from '../../hooks/useAttachments';
 interface RequestFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (description: string, notes: string, stagedFiles?: File[]) => void;
-  initialData?: { description: string; notes: string } | null;
+  onSubmit: (description: string, notes: string, isUrgent: boolean, stagedFiles?: File[]) => void;
+  initialData?: { description: string; notes: string; is_urgent?: boolean } | null;
   requestId?: string | null;
   projectId?: string | null;
 }
@@ -17,6 +17,7 @@ interface RequestFormModalProps {
 export default function RequestFormModal({ isOpen, onClose, onSubmit, initialData, requestId, projectId }: RequestFormModalProps) {
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
+  const [isUrgent, setIsUrgent] = useState(false);
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const { attachments, fetchAttachments, uploadFile, deleteFile, getDownloadUrl } = useAttachments(requestId ?? null);
 
@@ -24,6 +25,7 @@ export default function RequestFormModal({ isOpen, onClose, onSubmit, initialDat
     if (isOpen) {
       setDescription(initialData?.description ?? '');
       setNotes(initialData?.notes ?? '');
+      setIsUrgent(initialData?.is_urgent ?? false);
       setStagedFiles([]);
       if (requestId) fetchAttachments();
     }
@@ -32,7 +34,7 @@ export default function RequestFormModal({ isOpen, onClose, onSubmit, initialDat
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim()) return;
-    onSubmit(description.trim(), notes.trim(), requestId ? undefined : stagedFiles);
+    onSubmit(description.trim(), notes.trim(), isUrgent, requestId ? undefined : stagedFiles);
     onClose();
   };
 
@@ -75,6 +77,25 @@ export default function RequestFormModal({ isOpen, onClose, onSubmit, initialDat
             rows={3}
             placeholder="Optional notes..."
           />
+        </div>
+
+        <div
+          onClick={() => setIsUrgent(!isUrgent)}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-all select-none ${
+            isUrgent
+              ? 'bg-red-50 border-red-300'
+              : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          <div className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 ${
+            isUrgent ? 'bg-red-500 justify-end' : 'bg-gray-300 justify-start'
+          }`}>
+            <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+          </div>
+          <AlertTriangle className={`w-4 h-4 ${isUrgent ? 'text-red-500' : 'text-gray-400'}`} />
+          <span className={`text-sm font-medium ${isUrgent ? 'text-red-700' : 'text-gray-600'}`}>
+            Mark as Urgent
+          </span>
         </div>
 
         {projectId && (

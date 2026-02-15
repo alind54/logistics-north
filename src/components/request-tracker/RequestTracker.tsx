@@ -9,8 +9,8 @@ import { useAttachments } from '../../hooks/useAttachments';
 
 interface RequestTrackerProps {
   requests: Request[];
-  addRequest: (description: string, notes: string) => Promise<string | undefined> | void;
-  updateRequest: (id: string, description: string, notes: string) => void;
+  addRequest: (description: string, notes: string, isUrgent?: boolean) => Promise<string | undefined> | void;
+  updateRequest: (id: string, description: string, notes: string, isUrgent?: boolean) => void;
   deleteRequest: (id: string) => void;
   moveRequest: (id: string, direction: 'forward' | 'backward') => void;
   moveRequestToStage: (id: string, targetStageId: string) => void;
@@ -42,11 +42,11 @@ export default function RequestTracker({
     setShowModal(true);
   };
 
-  const handleSubmit = async (description: string, notes: string, stagedFiles?: File[]) => {
+  const handleSubmit = async (description: string, notes: string, isUrgent: boolean, stagedFiles?: File[]) => {
     if (editingRequest) {
-      updateRequest(editingRequest.id, description, notes);
+      updateRequest(editingRequest.id, description, notes, isUrgent);
     } else {
-      const newId = await addRequest(description, notes);
+      const newId = await addRequest(description, notes, isUrgent);
       if (newId && stagedFiles && stagedFiles.length > 0 && projectId) {
         for (const file of stagedFiles) {
           await uploadFile(newId, projectId, file);
@@ -109,7 +109,7 @@ export default function RequestTracker({
         isOpen={showModal}
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
-        initialData={editingRequest ? { description: editingRequest.description, notes: editingRequest.notes } : null}
+        initialData={editingRequest ? { description: editingRequest.description, notes: editingRequest.notes, is_urgent: editingRequest.is_urgent } : null}
         requestId={editingRequest?.id}
         projectId={projectId}
       />

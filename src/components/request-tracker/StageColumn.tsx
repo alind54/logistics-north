@@ -41,6 +41,7 @@ export default function StageColumn({ stage, requests, stageIndex, totalStages, 
                       ref={dragProvided.innerRef}
                       {...dragProvided.draggableProps}
                       {...dragProvided.dragHandleProps}
+                      className={dragSnapshot.isDragging ? 'cursor-grabbing' : 'cursor-grab'}
                     >
                       <RequestCard
                         request={request}

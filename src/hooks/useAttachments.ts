@@ -3,16 +3,6 @@ import type { Attachment } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
-const ALLOWED_TYPES = [
-  'application/pdf',
-  'image/png', 'image/jpeg', 'image/gif',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-];
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
 export function useAttachments(requestId: string | null) {
   const { user } = useAuth();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -32,14 +22,6 @@ export function useAttachments(requestId: string | null) {
 
   const uploadFile = async (reqId: string, projectId: string, file: File): Promise<boolean> => {
     if (!user) return false;
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      alert('File type not allowed. Use PDF, images, Word, or Excel.');
-      return false;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      alert('File too large. Maximum 10MB.');
-      return false;
-    }
 
     const storagePath = `${projectId}/${reqId}/${crypto.randomUUID()}_${file.name}`;
     const { error: uploadError } = await supabase.storage
@@ -55,7 +37,7 @@ export function useAttachments(requestId: string | null) {
       project_id: projectId,
       file_name: file.name,
       file_size: file.size,
-      mime_type: file.type,
+      mime_type: file.type || 'application/octet-stream',
       storage_path: storagePath,
       uploaded_by: user.id,
     });

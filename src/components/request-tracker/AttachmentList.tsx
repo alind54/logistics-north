@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Image, File, Download, Trash2, Loader2 } from 'lucide-react';
+import { FileText, Image, File, Download, Trash2, Loader2, Eye } from 'lucide-react';
 import type { Attachment } from '../../types';
 import RoleGate from '../auth/RoleGate';
 
@@ -18,19 +18,34 @@ function getFileIcon(mimeType: string) {
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
 export default function AttachmentList({ attachments, onDelete, onDownload }: Props) {
-  const [downloading, setDownloading] = useState<string | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
 
   if (attachments.length === 0) return null;
 
-  const handleDownload = async (att: Attachment) => {
-    setDownloading(att.id);
+  const handleView = async (att: Attachment) => {
+    setLoading(att.id);
     const url = await onDownload(att.storage_path);
     if (url) window.open(url, '_blank');
-    setDownloading(null);
+    setLoading(null);
+  };
+
+  const handleDownload = async (att: Attachment) => {
+    setLoading(att.id);
+    const url = await onDownload(att.storage_path);
+    if (url) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = att.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+    setLoading(null);
   };
 
   return (
@@ -41,12 +56,20 @@ export default function AttachmentList({ attachments, onDelete, onDownload }: Pr
           <span className="flex-1 truncate text-gray-700">{att.file_name}</span>
           <span className="text-xs text-gray-400 flex-shrink-0">{formatSize(att.file_size)}</span>
           <button
+            onClick={() => handleView(att)}
+            disabled={loading === att.id}
+            className="p-1 rounded hover:bg-emerald-50 text-emerald-400 hover:text-emerald-600 transition-colors"
+            title="View"
+          >
+            {loading === att.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+          </button>
+          <button
             onClick={() => handleDownload(att)}
-            disabled={downloading === att.id}
+            disabled={loading === att.id}
             className="p-1 rounded hover:bg-blue-50 text-blue-400 hover:text-blue-600 transition-colors"
             title="Download"
           >
-            {downloading === att.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+            <Download className="w-3.5 h-3.5" />
           </button>
           <RoleGate allowed={['admin', 'manager']}>
             <button

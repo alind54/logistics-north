@@ -9,6 +9,7 @@ interface DbRequest {
   stage_id: string;
   description: string;
   notes: string;
+  is_urgent: boolean;
   created_by: string;
   project_id: string;
   created_at: string;
@@ -21,6 +22,7 @@ function mapRow(row: DbRequest): Request {
     stage: row.stage_id,
     description: row.description,
     notes: row.notes,
+    is_urgent: row.is_urgent ?? false,
     created_by: row.created_by,
     project_id: row.project_id,
     created_at: row.created_at,
@@ -92,7 +94,7 @@ export function useRequests(projectId: string | null) {
     }
   };
 
-  const addRequest = async (description: string, notes: string): Promise<string | undefined> => {
+  const addRequest = async (description: string, notes: string, isUrgent: boolean = false): Promise<string | undefined> => {
     if (!user || !projectId) return;
     const tempId = crypto.randomUUID();
     const optimistic: Request = {
@@ -100,6 +102,7 @@ export function useRequests(projectId: string | null) {
       stage: STAGES[0].id,
       description,
       notes,
+      is_urgent: isUrgent,
       created_by: user.id,
       project_id: projectId,
       created_at: new Date().toISOString(),
@@ -109,7 +112,7 @@ export function useRequests(projectId: string | null) {
 
     const { data, error } = await supabase
       .from('requests')
-      .insert({ stage_id: STAGES[0].id, description, notes, created_by: user.id, project_id: projectId })
+      .insert({ stage_id: STAGES[0].id, description, notes, is_urgent: isUrgent, created_by: user.id, project_id: projectId })
       .select()
       .single();
 
@@ -124,11 +127,16 @@ export function useRequests(projectId: string | null) {
     }
   };
 
-  const updateRequest = async (id: string, description: string, notes: string) => {
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, description, notes } : r));
+  const updateRequest = async (id: string, description: string, notes: string, isUrgent?: boolean) => {
+    const updates: Partial<Request> = { description, notes };
+    if (isUrgent !== undefined) updates.is_urgent = isUrgent;
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+
+    const dbUpdates: Record<string, unknown> = { description, notes };
+    if (isUrgent !== undefined) dbUpdates.is_urgent = isUrgent;
     const { error } = await supabase
       .from('requests')
-      .update({ description, notes })
+      .update(dbUpdates)
       .eq('id', id);
     if (error) {
       fetchRequests();

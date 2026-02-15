@@ -40,6 +40,7 @@ export interface Request {
   project_id: string;
   created_at: string;
   updated_at: string;
+  is_urgent?: boolean;
   deleted_at?: string | null;
   deleted_by?: string | null;
 }

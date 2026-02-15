@@ -46,7 +46,19 @@ export default function AdminPage() {
     const { data, error: fnError } = await supabase.functions.invoke('admin-user-management', {
       body: payload,
     });
-    if (fnError) throw new Error(fnError.message);
+    if (fnError) {
+      // Extract the actual error message from the edge function response body
+      const context = (fnError as Record<string, unknown>).context;
+      if (context instanceof Response) {
+        try {
+          const body = await context.json();
+          if (body?.error) throw new Error(body.error);
+        } catch (e) {
+          if (e instanceof Error && e.message !== fnError.message) throw e;
+        }
+      }
+      throw new Error(fnError.message);
+    }
     if (data?.error) throw new Error(data.error);
     return data;
   };

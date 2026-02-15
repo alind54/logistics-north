@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Edit2, Trash2, Paperclip } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit2, Trash2, Paperclip, AlertTriangle } from 'lucide-react';
 import type { Request } from '../../types';
 import RoleGate from '../auth/RoleGate';
 
@@ -20,13 +20,20 @@ export default function RequestCard({ request, stageIndex, totalStages, onMove, 
     }
   };
 
+  const urgent = request.is_urgent;
+
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-100 p-3 hover:shadow-md transition-all ${
-      isDragging ? 'shadow-lg scale-105 rotate-1 opacity-90' : ''
+    <div className={`rounded-lg shadow-sm p-3 hover:shadow-md transition-all cursor-grab ${
+      isDragging ? 'shadow-lg scale-105 rotate-1 opacity-90 cursor-grabbing' : ''
+    } ${
+      urgent ? 'bg-red-50 border-2 border-red-400' : 'bg-white border border-gray-100'
     }`}>
-      <p className="font-semibold text-gray-800 text-sm leading-snug">{request.description}</p>
+      <div className="flex items-start gap-1.5">
+        {urgent && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />}
+        <p className={`font-semibold text-sm leading-snug ${urgent ? 'text-red-800' : 'text-gray-800'}`}>{request.description}</p>
+      </div>
       {request.notes && (
-        <p className="text-xs text-gray-500 mt-1.5 bg-gray-50 rounded-md px-2 py-1">{request.notes}</p>
+        <p className={`text-xs mt-1.5 rounded-md px-2 py-1 ${urgent ? 'text-red-600 bg-red-100/60' : 'text-gray-500 bg-gray-50'}`}>{request.notes}</p>
       )}
       {(attachmentCount ?? 0) > 0 && (
         <div className="flex items-center gap-1 mt-1.5 text-xs text-blue-500">
@@ -34,7 +41,7 @@ export default function RequestCard({ request, stageIndex, totalStages, onMove, 
           <span>{attachmentCount} file{attachmentCount !== 1 ? 's' : ''}</span>
         </div>
       )}
-      <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-50">
+      <div className={`flex items-center justify-between mt-3 pt-2 border-t ${urgent ? 'border-red-200' : 'border-gray-50'}`}>
         <div className="flex items-center gap-1">
           {stageIndex > 0 && (
             <button

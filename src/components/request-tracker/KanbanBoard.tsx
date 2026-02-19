@@ -50,38 +50,47 @@ export default function KanbanBoard({ getRequestsByStage, onMove, onMoveToStage,
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="space-y-3">
-        {/* Shared stages - full width vertical stack */}
-        {SHARED_STAGES.map((id) => renderStageColumn(id, columnProps))}
+      <div className="space-y-4">
+        {/* Shared stages - horizontal row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {SHARED_STAGES.map((id) => renderStageColumn(id, columnProps))}
+        </div>
 
         {/* Fork indicator */}
         <div className="flex justify-center py-2">
           <div className="flex flex-col items-center">
             <div className="w-px h-4 bg-gray-300" />
-            <div className="flex items-center gap-2">
-              <div className="w-16 h-px bg-gray-300" />
+            <div className="flex items-center gap-0">
+              <div className="w-24 h-px bg-gray-300" />
               <div className="w-2 h-2 rounded-full bg-gray-400" />
-              <div className="w-16 h-px bg-gray-300" />
+              <div className="w-24 h-px bg-gray-300" />
+            </div>
+            <div className="flex w-48 justify-between">
+              <div className="w-px h-4 bg-gray-300" />
+              <div className="w-px h-4 bg-gray-300" />
             </div>
           </div>
         </div>
 
-        {/* Orders Path */}
-        <div className="border-l-4 border-orange-400 pl-4 space-y-3">
-          <div className="flex items-center gap-2 pb-1">
-            <span className="text-sm font-bold text-orange-600 uppercase tracking-wider">Orders Path</span>
-            <div className="flex-1 h-px bg-orange-200" />
+        {/* Two paths side by side, each stacking stages vertically */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Orders Path */}
+          <div className="border-l-4 border-orange-400 pl-4 space-y-3">
+            <div className="flex items-center gap-2 pb-1">
+              <span className="text-sm font-bold text-orange-600 uppercase tracking-wider">Orders Path</span>
+              <div className="flex-1 h-px bg-orange-200" />
+            </div>
+            {ORDER_PATH.map((id) => renderStageColumn(id, columnProps))}
           </div>
-          {ORDER_PATH.map((id) => renderStageColumn(id, columnProps))}
-        </div>
 
-        {/* Contracts Path */}
-        <div className="border-l-4 border-teal-400 pl-4 space-y-3">
-          <div className="flex items-center gap-2 pb-1">
-            <span className="text-sm font-bold text-teal-600 uppercase tracking-wider">Contracts Path</span>
-            <div className="flex-1 h-px bg-teal-200" />
+          {/* Contracts Path */}
+          <div className="border-l-4 border-teal-400 pl-4 space-y-3">
+            <div className="flex items-center gap-2 pb-1">
+              <span className="text-sm font-bold text-teal-600 uppercase tracking-wider">Contracts Path</span>
+              <div className="flex-1 h-px bg-teal-200" />
+            </div>
+            {CONTRACT_PATH.map((id) => renderStageColumn(id, columnProps))}
           </div>
-          {CONTRACT_PATH.map((id) => renderStageColumn(id, columnProps))}
         </div>
       </div>
     </DragDropContext>

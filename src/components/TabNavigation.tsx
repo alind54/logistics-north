@@ -1,4 +1,4 @@
-import { Package, ClipboardList, Shield, FolderOpen, BarChart3, ScrollText, Wrench } from 'lucide-react';
+import { Package, ClipboardList, Shield, FolderOpen, BarChart3, ScrollText, Wrench, Archive } from 'lucide-react';
 import type { TabId } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -16,12 +16,13 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
     { id: 'requests', label: 'Request Tracker', icon: <Package className="w-5 h-5" /> },
     { id: 'todos', label: 'To-Do List', icon: <ClipboardList className="w-5 h-5" /> },
     { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 className="w-5 h-5" />, roles: ['admin', 'manager'] },
+    { id: 'archive', label: 'Archive', icon: <Archive className="w-5 h-5" />, roles: ['admin', 'manager'] },
   ];
 
   const tabs = allTabs.filter(t => !t.roles || (isAdmin && t.roles.includes('admin')) || (isManager && t.roles.includes('manager')));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 pt-6">
+    <div className="max-w-7xl mx-auto px-4 pt-8">
       <div className="flex gap-2 flex-wrap">
         {tabs.map((tab) => (
           <button

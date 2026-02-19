@@ -1,5 +1,6 @@
-import { ChevronLeft, ChevronRight, Edit2, Trash2, Paperclip, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit2, Trash2, Paperclip, AlertTriangle, Archive } from 'lucide-react';
 import type { Request } from '../../types';
+import { DONE_STAGE_IDS } from '../../constants';
 import RoleGate from '../auth/RoleGate';
 
 interface RequestCardProps {
@@ -9,18 +10,26 @@ interface RequestCardProps {
   onMove: (id: string, direction: 'forward' | 'backward') => void;
   onEdit: (request: Request) => void;
   onDelete: (id: string) => void;
+  onArchive?: (id: string) => void;
   isDragging?: boolean;
   attachmentCount?: number;
 }
 
-export default function RequestCard({ request, canMoveBackward, canMoveForward, onMove, onEdit, onDelete, isDragging, attachmentCount }: RequestCardProps) {
+export default function RequestCard({ request, canMoveBackward, canMoveForward, onMove, onEdit, onDelete, onArchive, isDragging, attachmentCount }: RequestCardProps) {
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this request?')) {
       onDelete(request.id);
     }
   };
 
+  const handleArchive = () => {
+    if (window.confirm('Archive this request? It will be moved to the Archive tab.')) {
+      onArchive?.(request.id);
+    }
+  };
+
   const urgent = request.is_urgent;
+  const isDone = DONE_STAGE_IDS.includes(request.stage);
 
   return (
     <div className={`rounded-lg shadow-sm p-3 hover:shadow-md transition-all cursor-grab ${
@@ -69,6 +78,15 @@ export default function RequestCard({ request, canMoveBackward, canMoveForward, 
             >
               <Trash2 className="w-4 h-4" />
             </button>
+            {isDone && onArchive && (
+              <button
+                onClick={handleArchive}
+                className="p-1 rounded hover:bg-amber-50 text-amber-400 hover:text-amber-600 transition-colors"
+                title="Archive"
+              >
+                <Archive className="w-4 h-4" />
+              </button>
+            )}
           </RoleGate>
         </div>
         <div className="flex items-center gap-1">

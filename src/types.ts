@@ -85,4 +85,4 @@ export interface AuditLog {
   project_name?: string;
 }
 
-export type TabId = 'requests' | 'todos' | 'dashboard';
+export type TabId = 'requests' | 'todos' | 'dashboard' | 'archive';

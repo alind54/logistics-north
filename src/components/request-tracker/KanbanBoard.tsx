@@ -9,6 +9,7 @@ interface KanbanBoardProps {
   onMoveToStage: (id: string, targetStageId: string) => void;
   onEdit: (request: Request) => void;
   onDelete: (id: string) => void;
+  onArchive?: (id: string) => void;
   attachmentCounts?: Record<string, number>;
 }
 
@@ -32,63 +33,55 @@ function renderStageColumn(
       onMove={props.onMove}
       onEdit={props.onEdit}
       onDelete={props.onDelete}
+      onArchive={props.onArchive}
       attachmentCounts={props.attachmentCounts}
     />
   );
 }
 
-export default function KanbanBoard({ getRequestsByStage, onMove, onMoveToStage, onEdit, onDelete, attachmentCounts }: KanbanBoardProps) {
+export default function KanbanBoard({ getRequestsByStage, onMove, onMoveToStage, onEdit, onDelete, onArchive, attachmentCounts }: KanbanBoardProps) {
   const handleDragEnd = (result: DropResult) => {
     const { draggableId, destination } = result;
     if (!destination) return;
     onMoveToStage(draggableId, destination.droppableId);
   };
 
-  const columnProps = { getRequestsByStage, onMove, onEdit, onDelete, attachmentCounts };
+  const columnProps = { getRequestsByStage, onMove, onEdit, onDelete, onArchive, attachmentCounts };
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      {/* Shared stages - centered, narrower */}
-      <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      <div className="space-y-3">
+        {/* Shared stages - full width vertical stack */}
         {SHARED_STAGES.map((id) => renderStageColumn(id, columnProps))}
-      </div>
 
-      {/* Fork indicator */}
-      <div className="flex justify-center mb-4">
-        <div className="flex flex-col items-center">
-          <div className="w-px h-4 bg-gray-300" />
-          <div className="flex items-center gap-0">
-            <div className="w-24 h-px bg-gray-300" />
-            <div className="w-2 h-2 rounded-full bg-gray-400" />
-            <div className="w-24 h-px bg-gray-300" />
-          </div>
-          <div className="flex w-48 justify-between">
+        {/* Fork indicator */}
+        <div className="flex justify-center py-2">
+          <div className="flex flex-col items-center">
             <div className="w-px h-4 bg-gray-300" />
-            <div className="w-px h-4 bg-gray-300" />
-          </div>
-        </div>
-      </div>
-
-      {/* Two paths side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Orders path */}
-        <div>
-          <div className="mb-2">
-            <span className="text-xs font-semibold text-orange-600 uppercase tracking-wider">Orders Path</span>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {ORDER_PATH.map((id) => renderStageColumn(id, columnProps))}
+            <div className="flex items-center gap-2">
+              <div className="w-16 h-px bg-gray-300" />
+              <div className="w-2 h-2 rounded-full bg-gray-400" />
+              <div className="w-16 h-px bg-gray-300" />
+            </div>
           </div>
         </div>
 
-        {/* Contracts path */}
-        <div>
-          <div className="mb-2">
-            <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">Contracts Path</span>
+        {/* Orders Path */}
+        <div className="border-l-4 border-orange-400 pl-4 space-y-3">
+          <div className="flex items-center gap-2 pb-1">
+            <span className="text-sm font-bold text-orange-600 uppercase tracking-wider">Orders Path</span>
+            <div className="flex-1 h-px bg-orange-200" />
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            {CONTRACT_PATH.map((id) => renderStageColumn(id, columnProps))}
+          {ORDER_PATH.map((id) => renderStageColumn(id, columnProps))}
+        </div>
+
+        {/* Contracts Path */}
+        <div className="border-l-4 border-teal-400 pl-4 space-y-3">
+          <div className="flex items-center gap-2 pb-1">
+            <span className="text-sm font-bold text-teal-600 uppercase tracking-wider">Contracts Path</span>
+            <div className="flex-1 h-px bg-teal-200" />
           </div>
+          {CONTRACT_PATH.map((id) => renderStageColumn(id, columnProps))}
         </div>
       </div>
     </DragDropContext>

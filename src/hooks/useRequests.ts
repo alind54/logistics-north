@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Request } from '../types';
-import { STAGES, STAGE_TRANSITIONS, DONE_STAGE_IDS } from '../constants';
+import { STAGES, STAGE_TRANSITIONS } from '../constants';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
@@ -64,7 +64,12 @@ export function useRequests(projectId: string | null) {
         });
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'requests', filter: `project_id=eq.${projectId}` }, (payload) => {
-        const updated = mapRow(payload.new as DbRequest);
+        const newRow = payload.new as DbRequest & { deleted_at?: string | null };
+        if (newRow.deleted_at) {
+          setRequests(prev => prev.filter(r => r.id !== newRow.id));
+          return;
+        }
+        const updated = mapRow(newRow as DbRequest);
         setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'requests', filter: `project_id=eq.${projectId}` }, (payload) => {
@@ -180,23 +185,20 @@ export function useRequests(projectId: string | null) {
     }
   };
 
-  const clearDoneRequests = async (): Promise<number> => {
-    if (!projectId) return 0;
-    const doneItems = requests.filter(r => DONE_STAGE_IDS.includes(r.stage));
-    const doneCount = doneItems.length;
-    if (doneCount === 0) return 0;
+  const archiveRequest = async (id: string) => {
+    if (!user) return;
+    const backup = requests.find(r => r.id === id);
+    if (!backup) return;
 
-    setRequests(prev => prev.filter(r => !DONE_STAGE_IDS.includes(r.stage)));
+    setRequests(prev => prev.filter(r => r.id !== id));
     const { error } = await supabase
       .from('requests')
-      .delete()
-      .in('stage_id', DONE_STAGE_IDS)
-      .eq('project_id', projectId);
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
+      .eq('id', id);
     if (error) {
-      fetchRequests();
-      alert('Failed to clear done items. Please try again.');
+      if (backup) setRequests(prev => [...prev, backup]);
+      alert('Failed to archive request. Please try again.');
     }
-    return doneCount;
   };
 
   const getRequestsByStage = (stageId: string): Request[] => {
@@ -210,7 +212,7 @@ export function useRequests(projectId: string | null) {
     deleteRequest,
     moveRequest,
     moveRequestToStage,
-    clearDoneRequests,
+    archiveRequest,
     getRequestsByStage,
   };
 }

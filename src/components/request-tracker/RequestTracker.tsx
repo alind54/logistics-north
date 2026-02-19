@@ -12,7 +12,7 @@ interface RequestTrackerProps {
   deleteRequest: (id: string) => void;
   moveRequest: (id: string, direction: 'forward' | 'backward') => void;
   moveRequestToStage: (id: string, targetStageId: string) => void;
-  clearDoneRequests: () => number | Promise<number>;
+  archiveRequest: (id: string) => void;
   getRequestsByStage: (stageId: string) => Request[];
   projectId?: string | null;
   showNewRequestModal?: boolean;
@@ -25,6 +25,7 @@ export default function RequestTracker({
   deleteRequest,
   moveRequest,
   moveRequestToStage,
+  archiveRequest,
   getRequestsByStage,
   projectId,
   showNewRequestModal,
@@ -77,6 +78,7 @@ export default function RequestTracker({
         onMoveToStage={moveRequestToStage}
         onEdit={handleEdit}
         onDelete={deleteRequest}
+        onArchive={archiveRequest}
         attachmentCounts={attachmentCounts}
       />
 

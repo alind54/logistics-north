@@ -1,8 +1,12 @@
 import { Loader2, RotateCcw, Archive } from 'lucide-react';
 import { useArchivedRequests } from '../../hooks/useArchivedRequests';
 
-export default function ArchiveView() {
-  const { archivedRequests, loading, restoreRequest } = useArchivedRequests();
+interface ArchiveViewProps {
+  projectId: string | null;
+}
+
+export default function ArchiveView({ projectId }: ArchiveViewProps) {
+  const { archivedRequests, loading, restoreRequest } = useArchivedRequests(projectId);
 
   const getPathLabel = (stageId: string) => {
     if (stageId === 'done_orders') return 'Orders';
@@ -48,7 +52,6 @@ export default function ArchiveView() {
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/30">
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Project</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Path</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Archived</th>
@@ -63,7 +66,6 @@ export default function ArchiveView() {
                   <div className="text-sm font-medium text-gray-700 max-w-xs truncate">{req.description}</div>
                   {req.notes && <div className="text-xs text-gray-400 mt-0.5 max-w-xs truncate">{req.notes}</div>}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-500">{req.project_name}</td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                     req.stage === 'done_orders'
@@ -79,7 +81,7 @@ export default function ArchiveView() {
                 <td className="px-4 py-3 text-sm text-gray-400">
                   {new Date(req.deleted_at).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-500">{req.archiver_name}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 truncate max-w-[120px]">{req.archiver_name}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end">
                     <button

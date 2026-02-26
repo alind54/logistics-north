@@ -108,7 +108,7 @@ export default function ProjectsPage() {
             <tbody>
               {projects.map((p) => (
                 <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-800">{p.name}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800 truncate max-w-[200px]">{p.name}</td>
                   <td className="px-4 py-3 text-gray-500 truncate max-w-xs">{p.description || '—'}</td>
                   <td className="px-4 py-3 text-gray-400 text-xs">
                     {new Date(p.created_at).toLocaleDateString()}

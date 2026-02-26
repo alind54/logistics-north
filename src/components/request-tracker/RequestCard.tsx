@@ -39,10 +39,10 @@ export default function RequestCard({ request, canMoveBackward, canMoveForward, 
     }`}>
       <div className="flex items-start gap-1.5">
         {urgent && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />}
-        <p className={`font-semibold text-sm leading-snug ${urgent ? 'text-red-800' : 'text-gray-800'}`}>{request.description}</p>
+        <p className={`font-semibold text-sm leading-snug line-clamp-2 break-words ${urgent ? 'text-red-800' : 'text-gray-800'}`}>{request.description}</p>
       </div>
       {request.notes && (
-        <p className={`text-xs mt-1.5 rounded-md px-2 py-1 ${urgent ? 'text-red-600 bg-red-100/60' : 'text-gray-500 bg-gray-50'}`}>{request.notes}</p>
+        <p className={`text-xs mt-1.5 rounded-md px-2 py-1 line-clamp-1 break-words ${urgent ? 'text-red-600 bg-red-100/60' : 'text-gray-500 bg-gray-50'}`}>{request.notes}</p>
       )}
       {(attachmentCount ?? 0) > 0 && (
         <div className="flex items-center gap-1 mt-1.5 text-xs text-blue-500">

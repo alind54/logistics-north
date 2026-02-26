@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase';
 import type { Profile, AppRole } from '../types';
 
 export default function AdminPage() {
-  const { isAdmin, isManager } = useAuth();
+  const { isAdmin, isManager, profile } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,20 +46,31 @@ export default function AdminPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Not authenticated');
 
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-user-management`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify(payload),
-      }
-    );
-    const body = await res.json();
-    if (!res.ok) throw new Error(body.error || 'An unexpected error occurred');
+    let res: Response;
+    try {
+      res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-user-management`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+    } catch {
+      throw new Error('Cannot reach edge function. Make sure it is deployed.');
+    }
+    const text = await res.text();
+    let body: Record<string, unknown>;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new Error(`Edge function returned invalid response (HTTP ${res.status}). Is it deployed?`);
+    }
+    if (!res.ok) throw new Error((body.error as string) || `Request failed (HTTP ${res.status})`);
     return body;
   };
 
@@ -158,6 +169,7 @@ export default function AdminPage() {
           onCreateUser={handleCreate}
           onUpdateUser={handleUpdate}
           editingUser={editingUser}
+          callerRole={profile?.role ?? null}
         />
       </div>
     </div>

@@ -31,19 +31,19 @@ interface DbRow {
   deleted_by: string;
 }
 
-export function useArchivedRequests() {
+export function useArchivedRequests(projectId: string | null) {
   const { user } = useAuth();
   const [archivedRequests, setArchivedRequests] = useState<ArchivedRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchArchived = useCallback(async () => {
-    setLoading(true);
+    if (!projectId) {
+      setArchivedRequests([]);
+      setLoading(false);
+      return;
+    }
 
-    const { data: projectsData } = await supabase
-      .from('projects')
-      .select('id, name');
-    const projectMap = new Map<string, string>();
-    (projectsData ?? []).forEach((p: { id: string; name: string }) => projectMap.set(p.id, p.name));
+    setLoading(true);
 
     const { data: profilesData } = await supabase
       .from('profiles')
@@ -54,6 +54,7 @@ export function useArchivedRequests() {
     const { data, error } = await supabase
       .from('requests')
       .select('*')
+      .eq('project_id', projectId)
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false });
 
@@ -70,18 +71,18 @@ export function useArchivedRequests() {
           created_at: row.created_at,
           deleted_at: row.deleted_at,
           deleted_by: row.deleted_by,
-          project_name: projectMap.get(row.project_id) ?? 'Unknown',
+          project_name: '',
           creator_name: profileMap.get(row.created_by) ?? 'Unknown',
           archiver_name: profileMap.get(row.deleted_by) ?? 'Unknown',
         }))
       );
     }
     setLoading(false);
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
-    if (user) fetchArchived();
-  }, [user, fetchArchived]);
+    if (user && projectId) fetchArchived();
+  }, [user, projectId, fetchArchived]);
 
   const restoreRequest = async (id: string) => {
     const { error } = await supabase

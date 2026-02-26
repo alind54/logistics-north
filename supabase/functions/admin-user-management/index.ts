@@ -66,6 +66,10 @@ Deno.serve(async (req: Request) => {
         if (!VALID_ROLES.includes(payload.role)) {
           return fail('Invalid role', 400, corsHeaders);
         }
+        // Managers cannot create admin accounts
+        if (callerProfile.role === 'manager' && payload.role === 'admin') {
+          return fail('Managers cannot assign the admin role', 403, corsHeaders);
+        }
 
         const { data, error } = await supabaseAdmin.auth.admin.createUser({
           email: payload.email,
@@ -77,6 +81,25 @@ Deno.serve(async (req: Request) => {
           },
         });
         if (error) throw error;
+
+        // Fallback: if the trigger didn't create the profile, do it manually
+        if (data.user) {
+          const { data: existingProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .eq('id', data.user.id)
+            .single();
+
+          if (!existingProfile) {
+            await supabaseAdmin.from('profiles').insert({
+              id: data.user.id,
+              email: payload.email,
+              full_name: payload.full_name,
+              role: payload.role,
+            });
+          }
+        }
+
         return new Response(JSON.stringify({ user: data.user }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -91,6 +114,10 @@ Deno.serve(async (req: Request) => {
         }
         if (payload.role !== undefined && !VALID_ROLES.includes(payload.role)) {
           return fail('Invalid role', 400, corsHeaders);
+        }
+        // Managers cannot promote users to admin
+        if (callerProfile.role === 'manager' && payload.role === 'admin') {
+          return fail('Managers cannot assign the admin role', 403, corsHeaders);
         }
         if (payload.email !== undefined && !EMAIL_RE.test(payload.email)) {
           return fail('Invalid email format', 400, corsHeaders);

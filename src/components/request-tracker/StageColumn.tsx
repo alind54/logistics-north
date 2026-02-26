@@ -26,7 +26,7 @@ export default function StageColumn({ stage, requests, canMoveBackward, canMoveF
   return (
     <div className="bg-gray-50/80 rounded-xl overflow-hidden border border-gray-200/60">
       <div className={`bg-gradient-to-r ${stage.color} text-white px-4 py-2.5 flex items-center justify-between`}>
-        <span className="font-semibold text-sm">{stage.name}</span>
+        <span className="font-semibold text-sm truncate">{stage.name}</span>
         <span className="bg-white/25 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
           {requests.length}
         </span>

@@ -85,7 +85,7 @@ export default function DashboardPage() {
         ) : activeTab === 'dashboard' ? (
           <ProjectDashboard projectId={selectedProjectId} />
         ) : activeTab === 'archive' ? (
-          <ArchiveView />
+          <ArchiveView projectId={selectedProjectId} />
         ) : null}
       </main>
     </div>

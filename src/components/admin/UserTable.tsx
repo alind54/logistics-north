@@ -88,10 +88,10 @@ export default function UserTable({ users, onEdit, onDelete, onResetPassword }: 
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-semibold">
                       {getInitials(u.full_name, u.email)}
                     </div>
-                    <span className="font-medium text-gray-800">{u.full_name || '(no name)'}</span>
+                    <span className="font-medium text-gray-800 truncate max-w-[180px] inline-block">{u.full_name || '(no name)'}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-gray-500">{u.email}</td>
+                <td className="px-4 py-3 text-gray-500 truncate max-w-[220px]">{u.email}</td>
                 <td className="px-4 py-3">
                   <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium capitalize ${roleBadgeColors[u.role] || 'bg-gray-100 text-gray-700'}`}>
                     {u.role}

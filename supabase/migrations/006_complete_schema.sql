@@ -327,7 +327,7 @@ CREATE POLICY "requests_select_project"
 CREATE POLICY "requests_insert_project"
   ON public.requests FOR INSERT TO authenticated
   WITH CHECK (
-    public.get_my_role() IN ('admin', 'manager')
+    public.get_my_role() IN ('admin', 'manager', 'logistics')
     AND (public.get_my_role() = 'admin' OR public.is_project_member(project_id))
   );
 
@@ -340,11 +340,7 @@ CREATE POLICY "requests_update_project"
   WITH CHECK (
     CASE
       WHEN public.get_my_role() = 'admin' THEN true
-      WHEN public.get_my_role() = 'manager' AND public.is_project_member(project_id) THEN true
-      WHEN public.get_my_role() = 'logistics' AND public.is_project_member(project_id) THEN
-        description = (SELECT description FROM public.requests r WHERE r.id = requests.id)
-        AND notes = (SELECT notes FROM public.requests r WHERE r.id = requests.id)
-        AND created_by = (SELECT created_by FROM public.requests r WHERE r.id = requests.id)
+      WHEN public.get_my_role() IN ('manager', 'logistics') AND public.is_project_member(project_id) THEN true
       ELSE false
     END
   );
@@ -407,7 +403,7 @@ CREATE POLICY "attachments_insert"
 CREATE POLICY "attachments_delete"
   ON public.attachments FOR DELETE TO authenticated
   USING (
-    public.get_my_role() IN ('admin', 'manager')
+    public.get_my_role() IN ('admin', 'manager', 'logistics')
     AND (public.get_my_role() = 'admin' OR public.is_project_member(project_id))
   );
 

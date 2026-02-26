@@ -58,7 +58,7 @@ export default function DashboardPage() {
           <ProjectSelector />
           <div className="flex items-center gap-2">
             {activeTab === 'requests' && (
-              <RoleGate allowed={['admin', 'manager']}>
+              <RoleGate allowed={['admin', 'manager', 'logistics']}>
                 <button
                   onClick={() => setShowNewRequestModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all shadow-md text-sm font-medium"

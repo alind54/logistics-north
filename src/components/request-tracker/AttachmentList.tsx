@@ -71,7 +71,7 @@ export default function AttachmentList({ attachments, onDelete, onDownload }: Pr
           >
             <Download className="w-3.5 h-3.5" />
           </button>
-          <RoleGate allowed={['admin', 'manager']}>
+          <RoleGate allowed={['admin', 'manager', 'logistics']}>
             <button
               onClick={() => onDelete(att.id, att.storage_path)}
               className="p-1 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"

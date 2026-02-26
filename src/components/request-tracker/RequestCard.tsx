@@ -63,7 +63,7 @@ export default function RequestCard({ request, canMoveBackward, canMoveForward, 
           )}
         </div>
         <div className="flex items-center gap-1">
-          <RoleGate allowed={['admin', 'manager']}>
+          <RoleGate allowed={['admin', 'manager', 'logistics']}>
             <button
               onClick={() => onEdit(request)}
               className="p-1 rounded hover:bg-blue-50 text-blue-400 hover:text-blue-600 transition-colors"
@@ -71,6 +71,8 @@ export default function RequestCard({ request, canMoveBackward, canMoveForward, 
             >
               <Edit2 className="w-4 h-4" />
             </button>
+          </RoleGate>
+          <RoleGate allowed={['admin', 'manager']}>
             <button
               onClick={handleDelete}
               className="p-1 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"

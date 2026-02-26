@@ -7,6 +7,7 @@ import MemberManagementModal from '../components/projects/MemberManagementModal'
 import { useAuth } from '../hooks/useAuth';
 import { useProject } from '../hooks/useProject';
 import { supabase } from '../lib/supabase';
+import { showToast } from '../lib/toast';
 import type { Project } from '../types';
 
 export default function ProjectsPage() {
@@ -52,7 +53,7 @@ export default function ProjectsPage() {
       .delete()
       .eq('id', project.id);
     if (error) {
-      alert('Failed to delete project: ' + error.message);
+      showToast('error', 'Failed to delete project: ' + error.message);
     } else {
       await refreshProjects();
     }

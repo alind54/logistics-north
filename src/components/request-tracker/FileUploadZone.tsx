@@ -37,7 +37,7 @@ export default function FileUploadZone({ onUpload }: Props) {
         multiple
         onChange={e => handleFiles(e.target.files)}
         className="hidden"
-        accept="*/*"
+        accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
       />
       {uploading ? (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
@@ -48,7 +48,7 @@ export default function FileUploadZone({ onUpload }: Props) {
         <div className="flex flex-col items-center gap-1">
           <Upload className="w-5 h-5 text-gray-400" />
           <span className="text-sm text-gray-500">Drop files here or click to browse</span>
-          <span className="text-xs text-gray-400">All file types accepted</span>
+          <span className="text-xs text-gray-400">PDF, images, Office docs, text, CSV, ZIP (max 10MB)</span>
         </div>
       )}
     </div>

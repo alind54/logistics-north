@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Edit2, Trash2, Key } from 'lucide-react';
 import type { Profile } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { showToast } from '../../lib/toast';
 import Modal from '../Modal';
 
 interface UserTableProps {
@@ -26,7 +27,7 @@ export default function UserTable({ users, onEdit, onDelete, onResetPassword }: 
 
   const handleDelete = async (userId: string, email: string) => {
     if (userId === currentUser?.id) {
-      alert('You cannot delete your own account');
+      showToast('error', 'You cannot delete your own account');
       return;
     }
     if (!window.confirm(`Delete user "${email}"? This cannot be undone.`)) return;
@@ -34,15 +35,15 @@ export default function UserTable({ users, onEdit, onDelete, onResetPassword }: 
     try {
       await onDelete(userId);
     } catch (err) {
-      alert('Failed to delete user: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      showToast('error', 'Failed to delete user: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
     setActionLoading('');
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetUserId || resetPassword.length < 6) {
-      setActionMsg('Password must be at least 6 characters');
+    if (!resetUserId || resetPassword.length < 8) {
+      setActionMsg('Password must be at least 8 characters');
       return;
     }
     setActionLoading(resetUserId);
@@ -62,8 +63,9 @@ export default function UserTable({ users, onEdit, onDelete, onResetPassword }: 
   };
 
   function getInitials(name: string, email: string): string {
-    const source = name || email;
-    const parts = source.trim().split(/\s+/);
+    const source = (name || email).trim();
+    if (!source) return '?';
+    const parts = source.split(/\s+/);
     if (parts.length === 1) return parts[0][0].toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
@@ -148,7 +150,7 @@ export default function UserTable({ users, onEdit, onDelete, onResetPassword }: 
               value={resetPassword}
               onChange={(e) => setResetPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              placeholder="At least 6 characters"
+              placeholder="At least 8 characters"
               required
             />
           </div>

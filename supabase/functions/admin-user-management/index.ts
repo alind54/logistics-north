@@ -119,6 +119,17 @@ Deno.serve(async (req: Request) => {
         if (callerProfile.role === 'manager' && payload.role === 'admin') {
           return fail('Managers cannot assign the admin role', 403, corsHeaders);
         }
+        // Prevent self-role-change
+        if (payload.user_id === caller.id && payload.role !== undefined) {
+          const { data: selfProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('role')
+            .eq('id', caller.id)
+            .single();
+          if (selfProfile && payload.role !== selfProfile.role) {
+            return fail('Cannot change your own role', 400, corsHeaders);
+          }
+        }
         if (payload.email !== undefined && !EMAIL_RE.test(payload.email)) {
           return fail('Invalid email format', 400, corsHeaders);
         }
@@ -150,6 +161,9 @@ Deno.serve(async (req: Request) => {
       case 'delete-user': {
         if (!payload.user_id || !UUID_RE.test(payload.user_id)) {
           return fail('Invalid user ID', 400, corsHeaders);
+        }
+        if (payload.user_id === caller.id) {
+          return fail('Cannot delete your own account', 400, corsHeaders);
         }
         const { error } = await supabaseAdmin.auth.admin.deleteUser(payload.user_id);
         if (error) throw error;

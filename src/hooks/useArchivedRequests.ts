@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { showToast } from '../lib/toast';
 
 interface ArchivedRequest {
   id: string;
@@ -90,7 +91,7 @@ export function useArchivedRequests(projectId: string | null) {
       .update({ deleted_at: null, deleted_by: null })
       .eq('id', id);
     if (error) {
-      alert('Failed to restore request.');
+      showToast('error', 'Failed to restore request.');
       return;
     }
     await fetchArchived();

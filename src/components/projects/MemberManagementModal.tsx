@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { UserPlus, X as XIcon, Loader2 } from 'lucide-react';
 import type { Profile } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { showToast } from '../../lib/toast';
 import Modal from '../Modal';
 
 interface MemberManagementModalProps {
@@ -65,7 +66,7 @@ export default function MemberManagementModal({ isOpen, onClose, projectId, proj
       .from('project_members')
       .insert({ project_id: projectId, user_id: addingUserId });
     if (error) {
-      alert('Failed to add member: ' + error.message);
+      showToast('error', 'Failed to add member: ' + error.message);
     } else {
       await fetchMembers();
       onMembersChanged();
@@ -84,7 +85,7 @@ export default function MemberManagementModal({ isOpen, onClose, projectId, proj
       .eq('project_id', projectId)
       .eq('user_id', userId);
     if (error) {
-      alert('Failed to remove member: ' + error.message);
+      showToast('error', 'Failed to remove member: ' + error.message);
     } else {
       await fetchMembers();
       onMembersChanged();

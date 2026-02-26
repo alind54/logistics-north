@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { Todo } from '../../types';
+import { showToast } from '../../lib/toast';
 import TodoItem from './TodoItem';
 import TodoFormModal from './TodoFormModal';
 
@@ -48,7 +49,7 @@ export default function TodoList({
   const handleClearCompleted = async () => {
     if (window.confirm(`Clear all ${completedCount} completed task(s)?`)) {
       const count = await clearCompleted();
-      alert(`Cleared ${count} completed task(s)!`);
+      showToast('success', `Cleared ${count} completed task(s)!`);
     }
   };
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Request, Todo, Project } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { showToast } from '../lib/toast';
 
 interface DbRequest {
   id: string;
@@ -187,7 +188,7 @@ export function useCorrections() {
       .eq('id', id);
 
     if (error) {
-      alert('Failed to move request stage.');
+      showToast('error', 'Failed to move request stage.');
       return;
     }
 
@@ -234,7 +235,7 @@ export function useCorrections() {
       .eq('id', id);
 
     if (error) {
-      alert('Failed to edit request.');
+      showToast('error', 'Failed to edit request.');
       return;
     }
 
@@ -253,7 +254,7 @@ export function useCorrections() {
       .eq('id', id);
 
     if (error) {
-      alert('Failed to delete request.');
+      showToast('error', 'Failed to delete request.');
       return;
     }
 
@@ -274,7 +275,7 @@ export function useCorrections() {
       .eq('id', id);
 
     if (error) {
-      alert('Failed to restore request.');
+      showToast('error', 'Failed to restore request.');
       return;
     }
 
@@ -317,7 +318,7 @@ export function useCorrections() {
       .eq('id', id);
 
     if (error) {
-      alert('Failed to edit todo.');
+      showToast('error', 'Failed to edit todo.');
       return;
     }
 
@@ -336,7 +337,7 @@ export function useCorrections() {
       .eq('id', id);
 
     if (error) {
-      alert('Failed to delete todo.');
+      showToast('error', 'Failed to delete todo.');
       return;
     }
 
@@ -357,7 +358,7 @@ export function useCorrections() {
       .eq('id', id);
 
     if (error) {
-      alert('Failed to restore todo.');
+      showToast('error', 'Failed to restore todo.');
       return;
     }
 
@@ -375,7 +376,7 @@ export function useCorrections() {
       .in('id', ids);
 
     if (error) {
-      alert('Failed to bulk move requests.');
+      showToast('error', 'Failed to bulk move requests.');
       return;
     }
 
@@ -400,7 +401,7 @@ export function useCorrections() {
       .in('id', ids);
 
     if (error) {
-      alert('Failed to bulk delete requests.');
+      showToast('error', 'Failed to bulk delete requests.');
       return;
     }
 

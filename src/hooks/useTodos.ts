@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Todo } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { showToast } from '../lib/toast';
 
 interface DbTodo {
   id: string;
@@ -98,7 +99,7 @@ export function useTodos(projectId: string | null) {
 
     if (error) {
       setTodos(prev => prev.filter(t => t.id !== tempId));
-      alert('Failed to create todo. Please try again.');
+      showToast('error', 'Failed to create todo. Please try again.');
     } else if (data) {
       setTodos(prev => prev.map(t => t.id === tempId ? mapRow(data as DbTodo) : t));
     }
@@ -112,7 +113,7 @@ export function useTodos(projectId: string | null) {
       .eq('id', id);
     if (error) {
       fetchTodos();
-      alert('Failed to update todo. Please try again.');
+      showToast('error', 'Failed to update todo. Please try again.');
     }
   };
 
@@ -122,7 +123,7 @@ export function useTodos(projectId: string | null) {
     const { error } = await supabase.from('todos').delete().eq('id', id);
     if (error) {
       if (backup) setTodos(prev => [...prev, backup]);
-      alert('Failed to delete todo. Please try again.');
+      showToast('error', 'Failed to delete todo. Please try again.');
     }
   };
 
@@ -137,7 +138,7 @@ export function useTodos(projectId: string | null) {
       .eq('id', id);
     if (error) {
       setTodos(prev => prev.map(t => t.id === id ? { ...t, completed: todo.completed } : t));
-      alert('Failed to update todo. Please try again.');
+      showToast('error', 'Failed to update todo. Please try again.');
     }
   };
 
@@ -155,7 +156,7 @@ export function useTodos(projectId: string | null) {
       .eq('project_id', projectId);
     if (error) {
       fetchTodos();
-      alert('Failed to clear completed. Please try again.');
+      showToast('error', 'Failed to clear completed. Please try again.');
     }
     return completedCount;
   };

@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { Request, Stage } from '../../types';
 import RequestCard from './RequestCard';
 
-const MAX_VISIBLE = 4;
+const MAX_VISIBLE = 2;
 
 interface StageColumnProps {
   stage: Stage;
@@ -42,7 +42,7 @@ export default function StageColumn({ stage, requests, canMoveBackward, canMoveF
               <p className="text-xs text-gray-400 text-center py-4">No items</p>
             ) : (
               <div className={`${showCollapsed ? 'max-h-[200px] overflow-hidden relative' : ''}`}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   {requests.map((request, index) => (
                     <Draggable key={request.id} draggableId={request.id} index={index}>
                       {(dragProvided, dragSnapshot) => (

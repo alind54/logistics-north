@@ -13,7 +13,7 @@ interface UserTableProps {
 }
 
 export default function UserTable({ users, onEdit, onDelete, onResetPassword }: UserTableProps) {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isManager } = useAuth();
   const [resetUserId, setResetUserId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState('');
   const [actionLoading, setActionLoading] = useState('');
@@ -100,6 +100,7 @@ export default function UserTable({ users, onEdit, onDelete, onResetPassword }: 
                   </span>
                 </td>
                 <td className="px-4 py-3">
+                  {!(isManager && u.role === 'admin') && (
                   <div className="flex items-center justify-end gap-1">
                     <button
                       onClick={() => onEdit(u)}
@@ -124,6 +125,7 @@ export default function UserTable({ users, onEdit, onDelete, onResetPassword }: 
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
+                  )}
                 </td>
               </tr>
             ))}

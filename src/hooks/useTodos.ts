@@ -13,7 +13,7 @@ interface DbTodo {
   project_id: string;
   created_at: string;
   updated_at: string;
-  profiles?: { full_name: string } | null;
+  profiles?: { full_name: string; email: string } | null;
 }
 
 function mapRow(row: DbTodo): Todo {
@@ -26,7 +26,7 @@ function mapRow(row: DbTodo): Todo {
     project_id: row.project_id,
     created_at: row.created_at,
     updated_at: row.updated_at,
-    creator_name: row.profiles?.full_name ?? undefined,
+    creator_name: row.profiles?.full_name || row.profiles?.email || undefined,
   };
 }
 
@@ -38,7 +38,7 @@ export function useTodos(projectId: string | null) {
     if (!projectId) return;
     const { data, error } = await supabase
       .from('todos')
-      .select('*, profiles!user_id(full_name)')
+      .select('*, profiles!user_id(full_name, email)')
       .eq('project_id', projectId)
       .is('deleted_at', null)
       .order('created_at', { ascending: true });
@@ -66,7 +66,7 @@ export function useTodos(projectId: string | null) {
         if (!newTodo.creator_name) {
           const { data } = await supabase
             .from('todos')
-            .select('*, profiles!user_id(full_name)')
+            .select('*, profiles!user_id(full_name, email)')
             .eq('id', newTodo.id)
             .single();
           if (data) {
@@ -102,7 +102,7 @@ export function useTodos(projectId: string | null) {
       project_id: projectId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      creator_name: profile?.full_name ?? undefined,
+      creator_name: profile?.full_name || profile?.email || undefined,
     };
     setTodos(prev => [...prev, optimistic]);
 

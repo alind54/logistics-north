@@ -44,6 +44,11 @@ export default function TodoItem({ todo, onToggle, onEdit, onDelete }: TodoItemP
           >
             {todo.task}
           </p>
+          {todo.creator_name && (
+            <p className="text-xs text-gray-400 mt-0.5">
+              Added by {todo.creator_name}
+            </p>
+          )}
           {todo.notes && (
             <p
               className={`text-sm mt-1 px-2 py-1 rounded-md ${

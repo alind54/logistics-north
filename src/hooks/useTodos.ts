@@ -13,6 +13,7 @@ interface DbTodo {
   project_id: string;
   created_at: string;
   updated_at: string;
+  profiles?: { full_name: string } | null;
 }
 
 function mapRow(row: DbTodo): Todo {
@@ -25,18 +26,19 @@ function mapRow(row: DbTodo): Todo {
     project_id: row.project_id,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    creator_name: row.profiles?.full_name ?? undefined,
   };
 }
 
 export function useTodos(projectId: string | null) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [todos, setTodos] = useState<Todo[]>([]);
 
   const fetchTodos = useCallback(async () => {
     if (!projectId) return;
     const { data, error } = await supabase
       .from('todos')
-      .select('*')
+      .select('*, profiles!user_id(full_name)')
       .eq('project_id', projectId)
       .is('deleted_at', null)
       .order('created_at', { ascending: true });
@@ -54,12 +56,24 @@ export function useTodos(projectId: string | null) {
 
     const channel = supabase
       .channel(`todos-realtime-${projectId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'todos', filter: `project_id=eq.${projectId}` }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'todos', filter: `project_id=eq.${projectId}` }, async (payload) => {
         const newTodo = mapRow(payload.new as DbTodo);
         setTodos(prev => {
           if (prev.some(t => t.id === newTodo.id)) return prev;
           return [...prev, newTodo];
         });
+        // Realtime payloads don't include joins — fetch creator name
+        if (!newTodo.creator_name) {
+          const { data } = await supabase
+            .from('todos')
+            .select('*, profiles!user_id(full_name)')
+            .eq('id', newTodo.id)
+            .single();
+          if (data) {
+            const enriched = mapRow(data as DbTodo);
+            setTodos(prev => prev.map(t => t.id === enriched.id ? enriched : t));
+          }
+        }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'todos', filter: `project_id=eq.${projectId}` }, (payload) => {
         const updated = mapRow(payload.new as DbTodo);
@@ -88,6 +102,7 @@ export function useTodos(projectId: string | null) {
       project_id: projectId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      creator_name: profile?.full_name ?? undefined,
     };
     setTodos(prev => [...prev, optimistic]);
 

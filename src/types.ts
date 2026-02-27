@@ -56,6 +56,7 @@ export interface Todo {
   updated_at: string;
   deleted_at?: string | null;
   deleted_by?: string | null;
+  creator_name?: string;
 }
 
 export interface Attachment {

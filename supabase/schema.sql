@@ -326,20 +326,17 @@ CREATE POLICY "requests_delete_project"
 
 CREATE POLICY "todos_select_project"
   ON public.todos FOR SELECT TO authenticated
-  USING (
-    (user_id = auth.uid() OR public.get_my_role() = 'admin')
-    AND (public.get_my_role() = 'admin' OR public.is_project_member(project_id))
-  );
+  USING (public.get_my_role() = 'admin' OR public.is_project_member(project_id));
 CREATE POLICY "todos_insert_project"
   ON public.todos FOR INSERT TO authenticated
   WITH CHECK (user_id = auth.uid() AND (public.get_my_role() = 'admin' OR public.is_project_member(project_id)));
 CREATE POLICY "todos_update_project"
   ON public.todos FOR UPDATE TO authenticated
-  USING (user_id = auth.uid() AND (public.get_my_role() = 'admin' OR public.is_project_member(project_id)))
-  WITH CHECK (user_id = auth.uid() AND (public.get_my_role() = 'admin' OR public.is_project_member(project_id)));
+  USING (public.get_my_role() = 'admin' OR public.is_project_member(project_id))
+  WITH CHECK (public.get_my_role() = 'admin' OR public.is_project_member(project_id));
 CREATE POLICY "todos_delete_project"
   ON public.todos FOR DELETE TO authenticated
-  USING (user_id = auth.uid() AND (public.get_my_role() = 'admin' OR public.is_project_member(project_id)));
+  USING (public.get_my_role() = 'admin' OR public.is_project_member(project_id));
 
 CREATE POLICY "attachments_select"
   ON public.attachments FOR SELECT TO authenticated

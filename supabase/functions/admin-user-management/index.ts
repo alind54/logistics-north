@@ -12,6 +12,18 @@ function fail(msg: string, status: number, headers: Record<string, string>) {
   });
 }
 
+async function getTargetRole(
+  adminClient: ReturnType<typeof createClient>,
+  userId: string
+): Promise<string | null> {
+  const { data } = await adminClient
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  return data?.role ?? null;
+}
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -115,9 +127,15 @@ Deno.serve(async (req: Request) => {
         if (payload.role !== undefined && !VALID_ROLES.includes(payload.role)) {
           return fail('Invalid role', 400, corsHeaders);
         }
-        // Managers cannot promote users to admin
-        if (callerProfile.role === 'manager' && payload.role === 'admin') {
-          return fail('Managers cannot assign the admin role', 403, corsHeaders);
+        // Managers cannot edit admin accounts at all, and cannot promote to admin
+        if (callerProfile.role === 'manager') {
+          const targetRole = await getTargetRole(supabaseAdmin, payload.user_id);
+          if (targetRole === 'admin') {
+            return fail('Managers cannot modify admin accounts', 403, corsHeaders);
+          }
+          if (payload.role === 'admin') {
+            return fail('Managers cannot assign the admin role', 403, corsHeaders);
+          }
         }
         // Prevent self-role-change
         if (payload.user_id === caller.id && payload.role !== undefined) {
@@ -165,6 +183,13 @@ Deno.serve(async (req: Request) => {
         if (payload.user_id === caller.id) {
           return fail('Cannot delete your own account', 400, corsHeaders);
         }
+        // Managers cannot delete admin accounts
+        if (callerProfile.role === 'manager') {
+          const targetRole = await getTargetRole(supabaseAdmin, payload.user_id);
+          if (targetRole === 'admin') {
+            return fail('Managers cannot modify admin accounts', 403, corsHeaders);
+          }
+        }
         const { error } = await supabaseAdmin.auth.admin.deleteUser(payload.user_id);
         if (error) throw error;
         return new Response(JSON.stringify({ success: true }), {
@@ -189,6 +214,13 @@ Deno.serve(async (req: Request) => {
         }
         if (!payload.new_password || typeof payload.new_password !== 'string' || payload.new_password.length < 8) {
           return fail('Password must be at least 8 characters', 400, corsHeaders);
+        }
+        // Managers cannot reset admin passwords
+        if (callerProfile.role === 'manager') {
+          const targetRole = await getTargetRole(supabaseAdmin, payload.user_id);
+          if (targetRole === 'admin') {
+            return fail('Managers cannot modify admin accounts', 403, corsHeaders);
+          }
         }
         const { error } = await supabaseAdmin.auth.admin.updateUserById(
           payload.user_id,

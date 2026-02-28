@@ -1,4 +1,6 @@
 const ALLOWED_ORIGINS = [
+  'https://www.northlightlivingtracker.com',
+  'https://northlightlivingtracker.com',
   'https://logistics-north.vercel.app',
   'http://localhost:5173',
 ];

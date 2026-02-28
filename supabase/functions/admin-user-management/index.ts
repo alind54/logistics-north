@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { getCorsHeaders } from '../_shared/cors.ts';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -25,13 +25,18 @@ async function getTargetRole(
 }
 
 Deno.serve(async (req: Request) => {
-  const corsHeaders = getCorsHeaders(req);
-
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  const FALLBACK_CORS: Record<string, string> = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
 
   try {
+    const corsHeaders = getCorsHeaders(req);
+
+    if (req.method === 'OPTIONS') {
+      return new Response('ok', { headers: corsHeaders });
+    }
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return fail('Missing auth header', 401, corsHeaders);
@@ -238,8 +243,8 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     console.error('admin-user-management error:', err);
     return new Response(
-      JSON.stringify({ error: 'An unexpected error occurred' }),
-      { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: err instanceof Error ? err.message : 'An unexpected error occurred' }),
+      { status: 500, headers: { ...FALLBACK_CORS, 'Content-Type': 'application/json' } }
     );
   }
 });

@@ -60,15 +60,16 @@ export default function AdminPage() {
           body: JSON.stringify(payload),
         }
       );
-    } catch {
-      throw new Error('Cannot reach edge function. Make sure it is deployed.');
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      throw new Error(`Cannot reach edge function (${detail}). Make sure it is deployed.`);
     }
     const text = await res.text();
     let body: Record<string, unknown>;
     try {
       body = JSON.parse(text);
     } catch {
-      throw new Error(`Edge function returned invalid response (HTTP ${res.status}). Is it deployed?`);
+      throw new Error(`Edge function error (HTTP ${res.status}): ${text.slice(0, 200)}`);
     }
     if (!res.ok) throw new Error((body.error as string) || `Request failed (HTTP ${res.status})`);
     return body;

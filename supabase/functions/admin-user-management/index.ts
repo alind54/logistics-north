@@ -13,7 +13,7 @@ function fail(msg: string, status: number, headers: Record<string, string>) {
 }
 
 async function getTargetRole(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   userId: string
 ): Promise<string | null> {
   const { data } = await adminClient

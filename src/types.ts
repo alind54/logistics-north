@@ -31,6 +31,11 @@ export interface Stage {
   position?: number;
 }
 
+export interface StageHistoryEntry {
+  stage_id: string;
+  entered_at: string;
+}
+
 export interface Request {
   id: string;
   stage: string;
@@ -43,6 +48,7 @@ export interface Request {
   is_urgent?: boolean;
   deleted_at?: string | null;
   deleted_by?: string | null;
+  stage_history?: StageHistoryEntry[];
 }
 
 export interface Todo {

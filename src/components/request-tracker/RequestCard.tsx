@@ -1,7 +1,11 @@
-import { ChevronLeft, ChevronRight, Edit2, Trash2, Paperclip, AlertTriangle, Archive } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit2, Trash2, Paperclip, AlertTriangle, Archive, Clock } from 'lucide-react';
 import type { Request } from '../../types';
-import { DONE_STAGE_IDS } from '../../constants';
+import { STAGES, DONE_STAGE_IDS } from '../../constants';
 import RoleGate from '../auth/RoleGate';
+
+function fmt(iso: string) {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+}
 
 interface RequestCardProps {
   request: Request;
@@ -48,6 +52,25 @@ export default function RequestCard({ request, canMoveBackward, canMoveForward, 
         <div className="flex items-center gap-1 mt-1.5 text-xs text-blue-500">
           <Paperclip className="w-3 h-3" />
           <span>{attachmentCount} file{attachmentCount !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+      {request.stage_history && request.stage_history.length > 0 && (
+        <div className={`mt-2 pt-2 border-t ${urgent ? 'border-red-200' : 'border-gray-100'}`}>
+          {request.stage_history.map((entry) => {
+            const stageName = STAGES.find(s => s.id === entry.stage_id)?.name ?? entry.stage_id;
+            const isCurrent = entry.stage_id === request.stage;
+            return (
+              <div key={entry.stage_id + entry.entered_at} className={`flex items-center gap-1.5 text-xs leading-5 ${
+                isCurrent
+                  ? (urgent ? 'text-red-700 font-semibold' : 'text-blue-600 font-semibold')
+                  : 'text-gray-400'
+              }`}>
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{stageName}</span>
+                <span className="ml-auto tabular-nums flex-shrink-0">{fmt(entry.entered_at)}</span>
+              </div>
+            );
+          })}
         </div>
       )}
       <div className={`flex items-center justify-between mt-3 pt-2 border-t ${urgent ? 'border-red-200' : 'border-gray-50'}`}>

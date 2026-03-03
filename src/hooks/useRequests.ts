@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Request } from '../types';
+import type { Request, StageHistoryEntry } from '../types';
 import { STAGES, STAGE_TRANSITIONS } from '../constants';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
@@ -15,6 +15,7 @@ interface DbRequest {
   project_id: string;
   created_at: string;
   updated_at: string;
+  request_stage_history?: { stage_id: string; entered_at: string }[];
 }
 
 function mapRow(row: DbRequest): Request {
@@ -28,6 +29,9 @@ function mapRow(row: DbRequest): Request {
     project_id: row.project_id,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    stage_history: (row.request_stage_history ?? [])
+      .slice()
+      .sort((a, b) => new Date(a.entered_at).getTime() - new Date(b.entered_at).getTime()),
   };
 }
 
@@ -39,7 +43,7 @@ export function useRequests(projectId: string | null) {
     if (!projectId) return;
     const { data, error } = await supabase
       .from('requests')
-      .select('*')
+      .select('*, request_stage_history(stage_id, entered_at)')
       .eq('project_id', projectId)
       .is('deleted_at', null)
       .order('created_at', { ascending: true });
@@ -64,13 +68,18 @@ export function useRequests(projectId: string | null) {
           return [...prev, newReq];
         });
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'requests', filter: `project_id=eq.${projectId}` }, (payload) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'requests', filter: `project_id=eq.${projectId}` }, async (payload) => {
         const newRow = payload.new as DbRequest & { deleted_at?: string | null };
         if (newRow.deleted_at) {
           setRequests(prev => prev.filter(r => r.id !== newRow.id));
           return;
         }
-        const updated = mapRow(newRow as DbRequest);
+        const { data: historyData } = await supabase
+          .from('request_stage_history')
+          .select('stage_id, entered_at')
+          .eq('request_id', newRow.id)
+          .order('entered_at', { ascending: true });
+        const updated = mapRow({ ...newRow, request_stage_history: historyData ?? [] });
         setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'requests', filter: `project_id=eq.${projectId}` }, (payload) => {
@@ -89,14 +98,21 @@ export function useRequests(projectId: string | null) {
     if (!request || request.stage === targetStageId) return;
     if (!STAGES.some(s => s.id === targetStageId)) return;
 
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, stage: targetStageId } : r));
+    const now = new Date().toISOString();
+    const newEntry: StageHistoryEntry = { stage_id: targetStageId, entered_at: now };
+    setRequests(prev => prev.map(r => r.id === id
+      ? { ...r, stage: targetStageId, stage_history: [...(r.stage_history ?? []), newEntry] }
+      : r
+    ));
     const { error } = await supabase
       .from('requests')
       .update({ stage_id: targetStageId })
       .eq('id', id);
     if (error) {
-      setRequests(prev => prev.map(r => r.id === id ? { ...r, stage: request.stage } : r));
+      setRequests(prev => prev.map(r => r.id === id ? { ...r, stage: request.stage, stage_history: request.stage_history } : r));
       showToast('error', 'Failed to move request. Please try again.');
+    } else {
+      await supabase.from('request_stage_history').insert({ request_id: id, stage_id: targetStageId, entered_at: now });
     }
   };
 
@@ -127,8 +143,10 @@ export function useRequests(projectId: string | null) {
       showToast('error', 'Failed to create request. Please try again.');
       return undefined;
     } else if (data) {
-      const mapped = mapRow(data as DbRequest);
+      const initialHistory: StageHistoryEntry[] = [{ stage_id: STAGES[0].id, entered_at: data.created_at }];
+      const mapped = { ...mapRow(data as DbRequest), stage_history: initialHistory };
       setRequests(prev => prev.map(r => r.id === tempId ? mapped : r));
+      await supabase.from('request_stage_history').insert({ request_id: data.id, stage_id: STAGES[0].id, entered_at: data.created_at });
       return mapped.id;
     }
   };
@@ -175,14 +193,21 @@ export function useRequests(projectId: string | null) {
     }
     if (!newStageId) return;
 
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, stage: newStageId! } : r));
+    const now = new Date().toISOString();
+    const newEntry: StageHistoryEntry = { stage_id: newStageId, entered_at: now };
+    setRequests(prev => prev.map(r => r.id === id
+      ? { ...r, stage: newStageId!, stage_history: [...(r.stage_history ?? []), newEntry] }
+      : r
+    ));
     const { error } = await supabase
       .from('requests')
       .update({ stage_id: newStageId })
       .eq('id', id);
     if (error) {
-      setRequests(prev => prev.map(r => r.id === id ? { ...r, stage: request.stage } : r));
+      setRequests(prev => prev.map(r => r.id === id ? { ...r, stage: request.stage, stage_history: request.stage_history } : r));
       showToast('error', 'Failed to move request. Please try again.');
+    } else {
+      await supabase.from('request_stage_history').insert({ request_id: id, stage_id: newStageId, entered_at: now });
     }
   };
 

@@ -235,7 +235,7 @@ NEW REQUEST
      │ Move Forward →
      ▼
 ┌──────────────┐
-│ Requisition  │ Stage 3
+│     CAS      │ Stage 3
 └────┬─────────┘
      │ Move Forward →
      ▼
@@ -343,7 +343,7 @@ STAGES = [
   },
   {
     id: 'requisition',
-    name: 'Requisition',
+    name: 'CAS',
     color: 'from-amber-500 to-amber-600'
   },
   {
@@ -876,7 +876,7 @@ Solution:
 Stage Colors (Gradients):
 - MRF:                 #3B82F6 → #2563EB (Blue)
 - Supplier Assignment: #8B5CF6 → #7C3AED (Purple)
-- Requisition:         #F59E0B → #D97706 (Amber)
+- CAS:                 #F59E0B → #D97706 (Amber)
 - Order:               #F97316 → #EA580C (Orange)
 - Inventory:           #10B981 → #059669 (Emerald)
 - Done:                #4B5563 → #374151 (Gray)

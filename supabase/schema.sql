@@ -165,7 +165,7 @@ CREATE INDEX idx_audit_logs_created_at ON public.audit_logs(created_at DESC);
 INSERT INTO public.stages (id, name, color, position) VALUES
   ('mrf',            'MRF',               'from-blue-500 to-blue-600',       0),
   ('supplier',       'Supplier Assignment','from-purple-500 to-purple-600',   1),
-  ('requisition',    'Requisitions',       'from-amber-500 to-amber-600',    2),
+  ('requisition',    'CAS',                'from-amber-500 to-amber-600',    2),
   ('order',          'Order',              'from-orange-500 to-orange-600',   3),
   ('inventory',      'Inventory',          'from-emerald-500 to-emerald-600', 4),
   ('done_orders',    'Done (Orders)',      'from-gray-600 to-gray-700',      5),

@@ -177,9 +177,9 @@ The application uses a branching 9-stage workflow for logistics requests. After 
 ### Visual Diagram
 
 ```
-MRF --> Supplier Assignment --> Requisitions --+--> Order --> Inventory --> Done (Orders)
-                                               |
-                                               +--> Contract --> Certificate --> Done (Contracts)
+MRF --> Supplier Assignment --> CAS --+--> Order --> Inventory --> Done (Orders)
+                                      |
+                                      +--> Contract --> Certificate --> Done (Contracts)
 ```
 
 ### Stage Details
@@ -188,7 +188,7 @@ MRF --> Supplier Assignment --> Requisitions --+--> Order --> Inventory --> Done
 |---|---------------------|----------------------------------------------|
 | 1 | **MRF**             | Material Request Form — the entry point for all requests. |
 | 2 | **Supplier Assignment** | A supplier is assigned to the request.     |
-| 3 | **Requisitions**    | Purchase requisition is created. This is the branching point. |
+| 3 | **CAS**             | CAS stage. This is the branching point. |
 | 4 | **Order**           | Purchase order path (Branch A).              |
 | 5 | **Inventory**       | Goods received into inventory.               |
 | 6 | **Done (Orders)**   | Order path completion.                       |
@@ -198,16 +198,16 @@ MRF --> Supplier Assignment --> Requisitions --+--> Order --> Inventory --> Done
 
 ### Branching Behavior
 
-At stage 3 (Requisitions), the workflow branches:
+At stage 3 (CAS), the workflow branches:
 
-- **Order path**: Requisitions --> Order --> Inventory --> Done (Orders)
-- **Contract path**: Requisitions --> Contract --> Certificate --> Done (Contracts)
+- **Order path**: CAS --> Order --> Inventory --> Done (Orders)
+- **Contract path**: CAS --> Contract --> Certificate --> Done (Contracts)
 
 Users choose the path by dragging the kanban card into either the Order column or the Contract column. The allowed transitions are defined in `src/constants.ts` and enforced during drag-and-drop operations.
 
 ### Kanban Layout
 
-The kanban board displays the shared stages (MRF, Supplier Assignment, Requisitions) in a horizontal row. Below the shared stages, the board forks into two vertical side-by-side columns:
+The kanban board displays the shared stages (MRF, Supplier Assignment, CAS) in a horizontal row. Below the shared stages, the board forks into two vertical side-by-side columns:
 
 - **Left column**: Order --> Inventory --> Done (Orders)
 - **Right column**: Contract --> Certificate --> Done (Contracts)

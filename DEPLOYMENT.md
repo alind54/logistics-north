@@ -120,7 +120,7 @@ npm run dev
 1. Select a project from the dropdown
 2. Click "New Request" to create
 3. Drag cards between stages, or use arrows for linear movement
-4. At Requisitions stage, drag to either Order or Contract path
+4. At CAS stage, drag to either Order or Contract path
 5. Archive completed requests from Done stages
 6. View archived requests in the Archive tab
 
